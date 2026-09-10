@@ -112,6 +112,8 @@
   .alert{background:#fff6e8; border:1px solid #ecd9b4; border-radius:10px; padding:12px 14px;
          font-size:.86rem; margin:14px 0}
 
+  [hidden]{display:none !important}
+
   /* firma del desarrollador */
   .firma{margin-top:34px; padding-top:16px; border-top:1px solid var(--line);
          text-align:center; font-size:.78rem; color:var(--soft); line-height:1.6}
@@ -241,13 +243,13 @@
       <p class="hint">Subí la foto tal como está: de cualquier tamaño y peso. El panel la recorta, la achica y la optimiza sola.</p>
       <label for="f_bg">Imagen de fondo</label>
       <input type="file" id="f_bg" accept="image/*">
-      <img class="thumb" id="bgThumb" alt="">
-      <button class="btn sm danger" id="bgClear" style="margin-top:8px">Quitar fondo</button>
+      <img class="thumb" id="bgThumb" alt="" data-quitar="bgClear">
+      <button class="btn sm danger" id="bgClear" style="margin-top:8px" hidden>Quitar fondo</button>
 
       <label for="f_logo" style="margin-top:22px">Logo (opcional)</label>
       <input type="file" id="f_logo" accept="image/*">
-      <img class="thumb round" id="logoThumb" alt="">
-      <button class="btn sm danger" id="logoClear" style="margin-top:8px">Quitar logo</button>
+      <img class="thumb round" id="logoThumb" alt="" data-quitar="logoClear">
+      <button class="btn sm danger" id="logoClear" style="margin-top:8px" hidden>Quitar logo</button>
 
     </div>
 
@@ -905,10 +907,14 @@
     markSwatch();
   }
 
+  // La miniatura y su botón "Quitar" aparecen y desaparecen juntos:
+  // ofrecer quitar algo que no está sólo confunde.
   function setThumb(sel, url) {
     const el = $(sel);
+    const btn = el.dataset.quitar ? document.getElementById(el.dataset.quitar) : null;
     if (url) { el.src = url; el.style.display = "block"; }
     else { el.removeAttribute("src"); el.style.display = "none"; }
+    if (btn) btn.hidden = !url;
   }
 
   async function upload(file, prefix) {
