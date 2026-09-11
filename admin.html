@@ -28,6 +28,11 @@
   h1{font-size:1.25rem; margin:0}
   h2{font-size:1rem; margin:0 0 4px}
   p.hint{color:var(--soft); font-size:.85rem; margin:0 0 16px}
+  ul.hint{color:var(--soft); font-size:.85rem; line-height:1.65; margin:0 0 16px; padding-left:20px}
+  ul.hint b{color:var(--ink)}
+  .resumen{border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-top:14px;
+           font-size:.88rem; line-height:1.6; background:#faf9f7}
+  .resumen b{display:block; margin-bottom:2px}
 
   /* barra superior */
   .top{position:sticky; top:0; z-index:20; background:rgba(245,244,241,.94);
@@ -198,7 +203,8 @@
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="menu" aria-selected="true">Carta</button>
     <button class="tab" role="tab" data-tab="design" aria-selected="false">Diseño</button>
-    <button class="tab" role="tab" data-tab="qr" aria-selected="false">QR y enlace</button>
+    <button class="tab" role="tab" data-tab="qr" aria-selected="false">QR</button>
+    <button class="tab" role="tab" data-tab="backup" aria-selected="false">Copias</button>
   </div>
 
   <!-- ---- pestaña carta ---- -->
@@ -296,6 +302,33 @@
         <button class="btn primary" id="dlQr">Descargar PNG</button>
         <button class="btn" id="printQr">Imprimir cartel para la mesa</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ---- pestaña copia de seguridad ---- -->
+  <div id="tab-backup" hidden>
+    <div class="card">
+      <h2>Descargar una copia</h2>
+      <p class="hint">Guarda la carta tal como está en este momento: secciones, productos, precios,
+        notas, colores, horarios y contactos. Bajan dos archivos de una sola vez.</p>
+      <ul class="hint">
+        <li><b>.json</b> — es el que lee el botón “Restaurar” de acá abajo.</li>
+        <li><b>.sql</b> — la red de seguridad. Si algún día esta pantalla no abre, lo pegás en
+          Supabase → SQL Editor → Run y la carta vuelve igual.</li>
+      </ul>
+      <button class="btn primary" id="dlBackup" style="width:100%; padding:13px">Descargar copia de seguridad</button>
+      <p class="hint" style="margin:14px 0 0">Las fotos no viajan dentro del archivo: quedan guardadas
+        en Supabase y la copia se acuerda de la dirección de cada una. Mientras no las borres de ahí,
+        al restaurar vuelven solas.</p>
+    </div>
+
+    <div class="card">
+      <h2>Restaurar una copia</h2>
+      <p class="hint">Elegí un archivo <b>.json</b> que hayas descargado antes. La carta vuelve exacta
+        a como estaba ese día, y <b>se reemplaza todo lo que hay ahora</b>. Te pide confirmación antes.</p>
+      <input type="file" id="f_backup" accept=".json,application/json">
+      <div class="resumen" id="backupResumen" hidden></div>
+      <button class="btn danger" id="doRestore" style="width:100%; padding:13px; margin-top:14px" hidden>Restaurar esta copia</button>
     </div>
   </div>
 
@@ -476,7 +509,7 @@
   /* ================= pestañas ================= */
   $$(".tab").forEach((t) => t.addEventListener("click", () => {
     $$(".tab").forEach((x) => x.setAttribute("aria-selected", x === t));
-    ["menu", "design", "qr"].forEach((k) => ($("#tab-" + k).hidden = k !== t.dataset.tab));
+    ["menu", "design", "qr", "backup"].forEach((k) => ($("#tab-" + k).hidden = k !== t.dataset.tab));
   }));
 
   /* ================= carta ================= */
@@ -988,6 +1021,215 @@
     if (error) return fail(error);
     toast("Diseño guardado");
     loadAll();
+  });
+
+  /* ================= copia de seguridad ================= */
+  // Guarda todo menos los archivos de imagen: de las fotos guarda su dirección,
+  // que es lo que la carta necesita para volver a mostrarlas.
+  const COPIA_VERSION = 1;
+  const VOLATILES = /_at$/;          // created_at / updated_at los pone la base sola
+
+  function selloFecha() {
+    const d = new Date(), z = (n) => String(n).padStart(2, "0");
+    return d.getFullYear() + "-" + z(d.getMonth() + 1) + "-" + z(d.getDate());
+  }
+
+  function bajar(nombre, texto, tipo) {
+    const url = URL.createObjectURL(new Blob([texto], { type: tipo + ";charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = nombre;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+
+  async function leerTodo() {
+    const [s, c, p] = await Promise.all([
+      db.from("settings").select("*").eq("id", 1).maybeSingle(),
+      db.from("categories").select("*").order("sort_order"),
+      db.from("products").select("*").order("sort_order")
+    ]);
+    if (s.error || c.error || p.error) throw (s.error || c.error || p.error);
+    return { settings: s.data || {}, categories: c.data || [], products: p.data || [] };
+  }
+
+  /* ---- el .sql de respaldo ---- */
+  const sqlTxt  = (v) => (v == null ? "null" : "'" + String(v).replace(/'/g, "''") + "'");
+  const sqlNum  = (v) => (v == null || v === "" ? "null" : String(Number(v)));
+  const sqlBool = (v) => (v ? "true" : "false");
+  const sqlVal  = (v) =>
+    v === null || v === undefined ? "null" :
+    typeof v === "number"  ? String(v) :
+    typeof v === "boolean" ? sqlBool(v) : sqlTxt(v);
+
+  function armarSql(data) {
+    const L = [];
+    L.push("-- ============================================================");
+    L.push("--  COPIA DE SEGURIDAD DE LA CARTA — " + (data.settings.bar_name || "Carta"));
+    L.push("--  Generada el " + new Date().toLocaleString("es-AR"));
+    L.push("--  " + data.categories.length + " secciones · " + data.products.length + " productos");
+    L.push("--");
+    L.push("--  PARA VOLVER ATRÁS:");
+    L.push("--  Supabase → SQL Editor → New query → pegar todo → Run.");
+    L.push("--  ⚠️  Reemplaza la carta que haya en ese momento.");
+    L.push("-- ============================================================");
+    L.push("");
+    L.push("begin;");
+    L.push("");
+    L.push("delete from public.products;");
+    L.push("delete from public.categories;");
+    L.push("");
+
+    data.categories.forEach((c, i) => {
+      const items = data.products
+        .filter((p) => p.category_id === c.id)
+        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+      L.push("-- " + (i + 1) + ". " + c.name);
+      L.push("with c as (");
+      L.push("  insert into public.categories (id, name, description, sort_order, visible, image_url)");
+      L.push("  values (" + [
+        sqlTxt(c.id), sqlTxt(c.name), sqlTxt(c.description || ""),
+        Number(c.sort_order) || 0, sqlBool(c.visible), sqlTxt(c.image_url)
+      ].join(", ") + ") returning id");
+      L.push(")");
+      if (!items.length) {
+        L.push("select count(*) from c;");
+      } else {
+        L.push("insert into public.products (category_id, name, description, price, price_note, sort_order, visible)");
+        L.push("select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis from c, (values");
+        L.push(items.map((p, j) => "  (" + [
+          sqlTxt(p.name),
+          sqlTxt(p.description || ""),
+          sqlNum(p.price) + (j === 0 ? "::numeric" : ""),
+          sqlTxt(p.price_note || ""),
+          Number(p.sort_order) || 0,
+          sqlBool(p.visible)
+        ].join(", ") + ")").join(",\n"));
+        L.push(") as v(name, descr, price, nota, ord, vis);");
+      }
+      L.push("");
+    });
+
+    const campos = Object.keys(data.settings)
+      .filter((k) => k !== "id" && !VOLATILES.test(k))
+      .map((k) => "  " + k + " = " + sqlVal(data.settings[k]));
+    if (campos.length) {
+      L.push("-- nombre, colores, logo, fondo, horarios y contactos");
+      L.push("update public.settings set");
+      L.push(campos.join(",\n"));
+      L.push("where id = 1;");
+      L.push("");
+    }
+    L.push("commit;");
+    L.push("");
+    return L.join("\n");
+  }
+
+  $("#dlBackup").addEventListener("click", async () => {
+    const btn = $("#dlBackup");
+    btn.disabled = true;
+    try {
+      const data = await leerTodo();
+      const slug = (data.settings.bar_name || "carta").toLowerCase()
+        .normalize("NFD").replace(/[̀-ͯ]/g, "")
+        .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "carta";
+      const base = "copia-" + slug + "-" + selloFecha();
+
+      bajar(base + ".json", JSON.stringify({
+        formato: "carta-bar",
+        version: COPIA_VERSION,
+        generado: new Date().toISOString(),
+        bar: data.settings.bar_name || "",
+        settings: data.settings,
+        categories: data.categories,
+        products: data.products
+      }, null, 2), "application/json");
+
+      // Si las dos descargas salen en el mismo instante, algunos navegadores
+      // se quedan sólo con la primera.
+      setTimeout(() => bajar(base + ".sql", armarSql(data), "text/plain"), 800);
+
+      toast(data.categories.length + " secciones y " + data.products.length + " productos guardados");
+    } catch (err) { fail(err); }
+    btn.disabled = false;
+  });
+
+  /* ---- restaurar ---- */
+  let copiaCargada = null;
+
+  function limpiar(fila) {
+    const out = {};
+    Object.keys(fila).forEach((k) => { if (!VOLATILES.test(k)) out[k] = fila[k]; });
+    return out;
+  }
+
+  $("#f_backup").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    copiaCargada = null;
+    $("#backupResumen").hidden = true;
+    $("#doRestore").hidden = true;
+    if (!file) return;
+
+    const lector = new FileReader();
+    lector.onerror = () => toast("No se pudo leer el archivo", true);
+    lector.onload = () => {
+      let d = null;
+      try { d = JSON.parse(lector.result); } catch (err) { d = null; }
+      if (!d || !Array.isArray(d.categories) || !Array.isArray(d.products)) {
+        return toast("Ese archivo no es una copia de la carta", true);
+      }
+      copiaCargada = d;
+      const f = d.generado ? new Date(d.generado) : null;
+      $("#backupResumen").innerHTML =
+        "<b>" + esc(d.bar || "Carta") + "</b>" +
+        (f && !isNaN(f) ? "Copia del " + f.toLocaleDateString("es-AR") + " a las " +
+          f.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }) + "<br>" : "") +
+        d.categories.length + " secciones · " + d.products.length + " productos";
+      $("#backupResumen").hidden = false;
+      $("#doRestore").hidden = false;
+    };
+    lector.readAsText(file);
+  });
+
+  $("#doRestore").addEventListener("click", async () => {
+    const d = copiaCargada;
+    if (!d) return;
+    if (!confirm(
+      "Vas a reemplazar la carta de ahora (" + state.categories.length + " secciones, " +
+      state.products.length + " productos) por la copia (" + d.categories.length +
+      " secciones, " + d.products.length + " productos).\n\nNo se puede deshacer."
+    )) return;
+
+    const btn = $("#doRestore");
+    btn.disabled = true; btn.textContent = "Restaurando…";
+    try {
+      let r = await db.from("products").delete().not("id", "is", null);
+      if (r.error) throw r.error;
+      r = await db.from("categories").delete().not("id", "is", null);
+      if (r.error) throw r.error;
+
+      if (d.categories.length) {
+        r = await db.from("categories").insert(d.categories.map(limpiar));
+        if (r.error) throw r.error;
+      }
+      if (d.products.length) {
+        r = await db.from("products").insert(d.products.map(limpiar));
+        if (r.error) throw r.error;
+      }
+      if (d.settings && Object.keys(d.settings).length) {
+        const s = limpiar(d.settings);
+        delete s.id;
+        r = await db.from("settings").update(s).eq("id", 1);
+        if (r.error) throw r.error;
+      }
+
+      copiaCargada = null;
+      $("#backupResumen").hidden = true;
+      $("#doRestore").hidden = true;
+      toast("Carta restaurada");
+      await loadAll();
+    } catch (err) { fail(err); }
+    btn.disabled = false; btn.textContent = "Restaurar esta copia";
   });
 
   /* ================= QR ================= */
