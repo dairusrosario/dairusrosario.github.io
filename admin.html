@@ -34,6 +34,18 @@
            font-size:.88rem; line-height:1.6; background:#faf9f7}
   .resumen b{display:block; margin-bottom:2px}
 
+  /* cargando / error */
+  .spin{width:26px; height:26px; margin:0 auto; border-radius:50%;
+        border:3px solid var(--line); border-top-color:var(--ink);
+        animation:giro .8s linear infinite}
+  @keyframes giro{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){ .spin{animation-duration:2.4s} }
+  .estado{margin-top:16px; display:flex; gap:12px; align-items:center}
+  .estado .txt{flex:1; font-size:.9rem; line-height:1.5}
+  .estado .txt b{display:block}
+  .estado.mal{border-color:#e8cfcf; background:#fdf7f7}
+  .estado .spin{width:20px; height:20px; border-width:2px; margin:0; flex:none}
+
   /* barra superior */
   .top{position:sticky; top:0; z-index:20; background:rgba(245,244,241,.94);
        backdrop-filter:blur(10px); border-bottom:1px solid var(--line); margin:0 -16px;
@@ -167,6 +179,16 @@
 </head>
 <body>
 
+<!-- ============ ARRANQUE ============
+     Se ve desde el primer instante, mientras averiguamos si hay sesión
+     abierta. Antes acá había una pantalla en blanco. -->
+<div class="login" id="bootView">
+  <div class="card" style="text-align:center">
+    <div class="spin"></div>
+    <p class="hint" style="margin:16px 0 0">Abriendo el panel…</p>
+  </div>
+</div>
+
 <!-- ============ LOGIN ============ -->
 <div class="login" id="loginView" hidden>
   <div class="card">
@@ -206,6 +228,9 @@
     <button class="tab" role="tab" data-tab="qr" aria-selected="false">QR</button>
     <button class="tab" role="tab" data-tab="backup" aria-selected="false">Copias</button>
   </div>
+
+  <!-- aviso de carga / de error, compartido por todas las pestañas -->
+  <div class="card estado" id="estado" hidden></div>
 
   <!-- ---- pestaña carta ---- -->
   <div id="tab-menu">
@@ -468,9 +493,31 @@
   }
   db = window.supabase.createClient(baseUrl(CONFIG.SUPABASE_URL), CONFIG.SUPABASE_ANON_KEY);
 
-  db.auth.getSession().then(({ data }) => (data.session ? start() : showLogin()));
+  function cerrarBoot() { $("#bootView").hidden = true; }
 
-  function showLogin() { $("#loginView").hidden = false; $("#appView").hidden = true; }
+  function showLogin() {
+    cerrarBoot();
+    $("#loginView").hidden = false;
+    $("#appView").hidden = true;
+  }
+
+  function mostrarEstado(html, mal) {
+    const e = $("#estado");
+    e.className = "card estado" + (mal ? " mal" : "");
+    e.innerHTML = html;
+    e.hidden = false;
+  }
+  function ocultarEstado() { $("#estado").hidden = true; }
+
+  (async function arrancar() {
+    let sesion = null;
+    try {
+      const { data } = await db.auth.getSession();
+      sesion = data && data.session;
+    } catch (err) { console.warn(err); }
+    if (!sesion) return showLogin();
+    start();
+  })();
 
   $("#loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -488,20 +535,62 @@
   $("#logout").addEventListener("click", async () => { await db.auth.signOut(); location.reload(); });
 
   async function start() {
+    cerrarBoot();
     $("#appView").hidden = false;
     // La carta pública vive en la misma carpeta que este panel.
     $("#publicUrl").value = location.origin + location.pathname.replace(/[^/]*$/, "");
-    await loadAll();
+    await loadAll(true);
   }
 
-  async function loadAll() {
+  async function pedirDatos() {
     const [s, c, p] = await Promise.all([
       db.from("settings").select("*").eq("id", 1).maybeSingle(),
       db.from("categories").select("*").order("sort_order"),
       db.from("products").select("*").order("sort_order")
     ]);
-    if (s.error || c.error || p.error) return fail(s.error || c.error || p.error);
-    state = { settings: s.data || {}, categories: c.data || [], products: p.data || [] };
+    const err = s.error || c.error || p.error;
+    if (err) throw err;
+    return { settings: s.data || {}, categories: c.data || [], products: p.data || [] };
+  }
+
+  // Al abrir el panel después de un rato, el permiso guardado en el navegador
+  // suele estar vencido: las consultas salían con él, la base las rechazaba y
+  // el panel quedaba vacío sin avisar. Ahora, si el primer intento falla,
+  // renovamos el permiso y volvemos a pedir los datos.
+  async function loadAll(primeraVez) {
+    if (primeraVez) {
+      $("#cats").innerHTML = "";
+      mostrarEstado('<div class="spin"></div><div class="txt">Cargando la carta…</div>');
+    }
+
+    let datos = null;
+    try {
+      datos = await pedirDatos();
+    } catch (err) {
+      console.warn("Primer intento fallido, renuevo la sesión:", err);
+      if (primeraVez) {
+        mostrarEstado('<div class="spin"></div><div class="txt">Renovando la sesión…</div>');
+      }
+      try {
+        await db.auth.refreshSession();
+        datos = await pedirDatos();
+      } catch (err2) {
+        console.error(err2);
+        const codigo = err2 && (err2.status || err2.code);
+        if (codigo === 401 || codigo === "PGRST301") return showLogin();
+        mostrarEstado(
+          '<div class="txt"><b>No se pudo cargar la carta</b>' +
+          esc((err2 && (err2.message || err2.error_description)) ||
+              "Revisá la conexión y probá de nuevo.") +
+          '</div><button class="btn sm" id="reintentar">Reintentar</button>', true);
+        const btn = $("#reintentar");
+        if (btn) btn.addEventListener("click", () => loadAll(true));
+        return;
+      }
+    }
+
+    state = datos;
+    ocultarEstado();
     renderMenu();
     fillDesign();
   }
