@@ -373,6 +373,10 @@
       <input type="text" id="c_name" maxlength="60" placeholder="Tragos de autor" required>
       <label for="c_desc">Descripción (opcional)</label>
       <input type="text" id="c_desc" maxlength="120" placeholder="Preparados al momento">
+      <div id="c_posRow" hidden>
+        <label for="c_pos">Dónde va en la carta</label>
+        <select id="c_pos"></select>
+      </div>
     </div>
     <div class="dlg-foot">
       <button class="btn" value="cancel">Cancelar</button>
@@ -864,28 +868,70 @@
   /* ---- secciones ---- */
   $("#addCat").addEventListener("click", () => catDialog(null));
 
+  // El desplegable de posición: "al principio", "después de X" o "al final".
+  // Sirve para crear la sección donde va y también para mover una que ya
+  // existe sin apretar la flechita veinte veces.
+  function llenarPosiciones(cat) {
+    const fila = $("#c_posRow");
+    const sel = $("#c_pos");
+    const otras = state.categories.filter((c) => !cat || c.id !== cat.id);
+
+    if (!otras.length) { fila.hidden = true; return otras; }   // es la primera sección
+
+    const ops = ['<option value="0">Al principio de la carta</option>'];
+    for (let i = 0; i < otras.length - 1; i++) {
+      ops.push('<option value="' + (i + 1) + '">Después de ' + esc(otras[i].name) + "</option>");
+    }
+    ops.push('<option value="' + otras.length + '">Al final de la carta</option>');
+    sel.innerHTML = ops.join("");
+
+    // Nueva → al principio.  Editando → el lugar que ya ocupa.
+    const actual = cat ? state.categories.findIndex((c) => c.id === cat.id) : 0;
+    sel.value = String(Math.max(0, Math.min(otras.length, actual)));
+    fila.hidden = false;
+    return otras;
+  }
+
   function catDialog(cat) {
     const dlg = $("#catDlg");
     $("#catDlgTitle").textContent = cat ? "Editar sección" : "Nueva sección";
     $("#c_name").value = cat ? cat.name : "";
     $("#c_desc").value = cat ? cat.description || "" : "";
+    const otras = llenarPosiciones(cat);
     dlg.returnValue = "";
     dlg.showModal();
+
     dlg.onclose = async () => {
       if (dlg.returnValue !== "ok") return;
       const name = $("#c_name").value.trim();
       if (!name) return;
+
       const body = { name, description: $("#c_desc").value.trim() };
-      let res;
-      if (cat) res = await db.from("categories").update(body).eq("id", cat.id);
-      else {
-        body.sort_order = state.categories.length + 1;
+      const destino = $("#c_posRow").hidden
+        ? otras.length
+        : Math.max(0, Math.min(otras.length, Number($("#c_pos").value) || 0));
+
+      let fila;
+      if (cat) {
+        const res = await db.from("categories").update(body).eq("id", cat.id).select().maybeSingle();
+        if (res.error) return fail(res.error);
+        fila = res.data || Object.assign({}, cat, body);
+      } else {
         body.visible = true;
-        res = await db.from("categories").insert(body);
+        body.sort_order = state.categories.length + 1;   // provisorio: enseguida se reordena
+        const res = await db.from("categories").insert(body).select().maybeSingle();
+        if (res.error) return fail(res.error);
+        fila = res.data;
       }
-      if (res.error) return fail(res.error);
+
       toast(cat ? "Sección actualizada" : "Sección creada");
-      loadAll();
+      if (!fila) return loadAll();
+
+      const orden = otras.slice();
+      orden.splice(destino, 0, fila);
+      const cambia = orden.some((c, i) => !state.categories[i] || state.categories[i].id !== c.id);
+      if (cambia) await persistOrder("categories", orden);
+      else loadAll();
     };
   }
 
