@@ -106,8 +106,33 @@
   }
   .chip[aria-current="true"]{background:var(--accent); border-color:var(--accent); color:var(--accent-ink); font-weight:500}
 
+  /* ---------- buscador ---------- */
+  .buscar{
+    display:flex; align-items:center; gap:9px; margin:0 20px 9px;
+    border:1px solid var(--line); border-radius:999px; padding:0 14px;
+    transition:border-color .2s;
+  }
+  .buscar:focus-within{border-color:var(--accent)}
+  .buscar svg{width:16px; height:16px; flex:0 0 auto; fill:none; stroke:var(--ink-soft);
+              stroke-width:1.8; stroke-linecap:round}
+  .buscar input{
+    flex:1 1 auto; min-width:0; border:0; background:transparent; color:var(--ink);
+    font:inherit; font-size:.92rem; padding:10px 0; outline:none;
+  }
+  .buscar input::placeholder{color:var(--ink-soft)}
+  .buscar input::-webkit-search-cancel-button{display:none}
+  .buscar button{
+    flex:0 0 auto; border:0; background:transparent; color:var(--ink-soft);
+    font:inherit; font-size:1.3rem; line-height:1; cursor:pointer; padding:4px 2px;
+  }
+  .q-info{margin:0 20px; color:var(--ink-soft); font-size:.76rem;
+          letter-spacing:.08em; text-transform:uppercase}
+  [hidden]{display:none !important}
+
   /* ---------- secciones ---------- */
-  section{padding-top:44px; scroll-margin-top:74px; position:relative}
+  /* El alto de la barra pegajosa lo mide el script: así el salto a una sección
+     cae en el lugar justo aunque la barra cambie de alto. */
+  section{padding-top:44px; scroll-margin-top:calc(var(--nav-h, 74px) + 8px); position:relative}
   /* Foto de la sección: se muestra entera, a todo el ancho, arriba del título. */
   section.con-foto{padding-top:0}
   /* La proporción es fija (2.4:1), la misma con la que recorta el panel:
@@ -128,11 +153,15 @@
   h2::after{content:''; display:block; width:46px; height:2px; background:var(--accent); margin-top:9px}
 
   .item{padding:16px 0; border-bottom:1px solid var(--line-soft)}
-  .item:last-child{border-bottom:none}
+  .item:last-child, .item.ultimo{border-bottom:none}
   .item-head{display:flex; align-items:baseline; gap:10px}
   .item-name{font-weight:500; font-size:1.02rem; color:var(--ink)}
   .dots{flex:1 1 auto; height:0; border-bottom:1px dotted var(--dots); transform:translateY(-4px); min-width:14px}
   .item-price{font-weight:500; font-size:1rem; font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--ink)}
+  /* Producto sin precio cargado: "Consultar" en tono menor, para que no se
+     confunda con un importe ni quede un hueco raro. */
+  .item-price.consultar{font-weight:400; font-size:.86rem; color:var(--ink-soft);
+                        font-variant-numeric:normal; letter-spacing:.03em}
   .item-note{font-size:.75rem; color:var(--ink-soft); margin-left:6px}
   .item-desc{margin:5px 0 0; color:var(--ink-soft); font-size:.88rem; max-width:52ch}
 
@@ -196,7 +225,15 @@
     <p id="tagline"></p>
     <div class="rule"></div>
   </header>
-  <nav id="nav" hidden><div class="chips" id="chips"></div></nav>
+  <nav id="nav" hidden>
+    <div class="buscar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5l-4-4"/></svg>
+      <input id="q" type="search" autocomplete="off" placeholder="Buscar en la carta…" aria-label="Buscar en la carta">
+      <button id="qClear" type="button" aria-label="Borrar la búsqueda" hidden>&times;</button>
+    </div>
+    <div class="chips" id="chips"></div>
+    <p class="q-info" id="qInfo" role="status" hidden></p>
+  </nav>
   <main id="menu"><div class="state"><div class="spinner"></div>Cargando la carta…</div></main>
   <footer id="footer" hidden></footer>
 </div>
@@ -377,12 +414,13 @@
       const items = prods.filter((p) => p.category_id === c.id).map((p) => {
         const precio = money(p.price, symbol);
         const nota = p.price_note ? '<span class="item-note">' + esc(p.price_note) + "</span>" : "";
-        // Sin precio cargado no dibujamos los puntitos: quedarían colgando en el vacío.
-        const derecha = precio
-          ? '<span class="dots"></span><span class="item-price">' + esc(precio) + nota + "</span>"
-          : (p.price_note ? '<span class="dots"></span><span class="item-price">' + nota + "</span>" : "");
+        // Sin precio cargado decimos "Consultar": el hueco vacío se leía como un error.
+        const derecha = '<span class="dots"></span>' + (precio
+          ? '<span class="item-price">' + esc(precio) + nota + "</span>"
+          : '<span class="item-price consultar">Consultar' + nota + "</span>");
+        const busca = normalizar([p.name, p.description, p.price_note].join(" "));
         return `
-        <article class="item">
+        <article class="item" data-busca="${esc(busca)}">
           <div class="item-head">
             <span class="item-name">${esc(p.name)}</span>
             ${derecha}
@@ -393,7 +431,7 @@
       const foto = c.image_url
         ? '<img class="sec-foto" src="' + esc(c.image_url) + '" alt="" loading="lazy" decoding="async">'
         : "";
-      return `<section id="sec-${esc(c.id)}"${c.image_url ? ' class="con-foto"' : ""}>
+      return `<section id="sec-${esc(c.id)}" data-busca="${esc(normalizar(c.name + " " + (c.description || "")))}"${c.image_url ? ' class="con-foto"' : ""}>
           ${foto}
           <div class="sec-head">
             <h2>${esc(c.name)}</h2>
@@ -419,8 +457,70 @@
     foot.innerHTML = horarios(s) + contacto(s) + firma();
     foot.hidden = false;
 
+    filtrar($("#q").value);
     setupScrollSpy();
   }
+
+  /* ---------- buscador ---------- */
+  // Sin acentos y en minúscula: así "cafe" encuentra "Cafetería" y
+  // "tiramisu" encuentra "Tiramisú".
+  function normalizar(s) {
+    return String(s == null ? "" : s)
+      .normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  }
+
+  // El alto real de la barra pegajosa, para que el salto a una sección
+  // no quede tapado por ella.
+  function medirNav() {
+    const nav = $("#nav");
+    const alto = nav.hidden ? 0 : Math.round(nav.getBoundingClientRect().height);
+    document.documentElement.style.setProperty("--nav-h", alto + "px");
+    return alto;
+  }
+
+  function filtrar(texto) {
+    const palabras = normalizar(texto).split(/\s+/).filter(Boolean);
+    const buscando = palabras.length > 0;
+    const coincide = (heno) => palabras.every((w) => heno.indexOf(w) !== -1);
+    let encontrados = 0;
+
+    [].slice.call(document.querySelectorAll("main section")).forEach((sec) => {
+      // Si el nombre de la sección coincide, mostramos la sección entera.
+      const secCoincide = buscando && coincide(sec.dataset.busca || "");
+      let ultimo = null;
+      [].slice.call(sec.querySelectorAll(".item")).forEach((it) => {
+        const ok = !buscando || secCoincide || coincide(it.dataset.busca || "");
+        it.hidden = !ok;
+        it.classList.remove("ultimo");
+        if (ok) { ultimo = it; encontrados++; }
+      });
+      if (ultimo) ultimo.classList.add("ultimo");   // sin rayita colgando al final
+      sec.hidden = buscando && !ultimo;
+    });
+
+    $("#chips").hidden = buscando;     // filtrando, saltar de sección no tiene sentido
+    $("#qClear").hidden = !buscando;
+
+    const info = $("#qInfo");
+    if (buscando) {
+      info.textContent = encontrados === 0
+        ? "Nada con “" + texto.trim() + "”"
+        : encontrados + (encontrados === 1 ? " resultado" : " resultados");
+      info.hidden = false;
+    } else {
+      info.hidden = true;
+    }
+    medirNav();
+  }
+
+  $("#q").addEventListener("input", (e) => filtrar(e.target.value));
+  $("#qClear").addEventListener("click", () => {
+    const campo = $("#q");
+    campo.value = "";
+    filtrar("");
+    campo.focus();
+  });
+  addEventListener("resize", medirNav);
 
   function setupScrollSpy() {
     const nav = $("#nav");
@@ -428,6 +528,7 @@
     const chips = [].slice.call(document.querySelectorAll(".chip"));
     if (!sections.length || !("IntersectionObserver" in window)) return;
 
+    const alto = medirNav();
     const io = new IntersectionObserver((entries) => {
       entries.forEach((en) => {
         if (!en.isIntersecting) return;
@@ -437,7 +538,7 @@
           active.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
         }
       });
-    }, { rootMargin: "-72px 0px -70% 0px", threshold: 0 });
+    }, { rootMargin: "-" + (alto + 6) + "px 0px -70% 0px", threshold: 0 });
     sections.forEach((s) => io.observe(s));
 
     addEventListener("scroll", () => {
