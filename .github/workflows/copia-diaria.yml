@@ -1,0 +1,69 @@
+# ============================================================
+#  Copia de seguridad diaria de la carta.
+#
+#  Corre todos los días a las 6 de la mañana (hora de Argentina),
+#  antes de que abra el bar. Guarda la copia en dos lugares:
+#    1. En este repositorio, carpeta copias/, sólo si algo cambió.
+#       El historial de GitHub te deja ver y bajar cualquier versión anterior.
+#    2. Como archivo descargable desde la pestaña Actions, que vive
+#       fuera del repositorio y GitHub conserva 90 días.
+#
+#  También se puede correr a mano: Actions → Copia diaria de la carta
+#  → Run workflow.
+#
+#  ⚠️  GitHub apaga las tareas programadas de un repositorio público
+#      tras 60 días sin actividad, y avisa por mail. Si pasa, se
+#      vuelve a encender desde Actions con un clic.
+# ============================================================
+
+name: Copia diaria de la carta
+
+on:
+  schedule:
+    - cron: "0 9 * * *"     # 09:00 UTC = 06:00 en Argentina
+  workflow_dispatch:         # botón para correrla cuando quieras
+
+permissions:
+  contents: write            # para poder guardar la copia en el repositorio
+
+concurrency:
+  group: copia-carta
+  cancel-in-progress: false
+
+jobs:
+  copia:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Bajar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Pedir la carta a Supabase y armar los archivos
+        env:
+          # Son los mismos valores que ya están dentro de index.html y que
+          # ve cualquiera que abra la carta: la clave "publishable" sólo
+          # permite leer, y las reglas de la base impiden escribir sin
+          # usuario. La clave "service_role" NO va acá nunca.
+          SUPABASE_URL: https://kkvtsodkmkxxmklsdlru.supabase.co
+          SUPABASE_KEY: sb_publishable_Nr9skTsw2zPsnvBiNHUgbQ_6zAOlA_t
+        run: node .github/scripts/copia.mjs
+
+      - name: Guardar en el repositorio si cambió algo
+        run: |
+          # --porcelain y no "git diff", porque la primera vez los archivos
+          # todavía no están versionados y un diff no los vería.
+          if [ -z "$(git status --porcelain -- copias/)" ]; then
+            echo "La carta está igual que ayer. No hay nada que guardar."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add copias/
+          git commit -m "Copia de la carta — $(TZ=America/Argentina/Buenos_Aires date '+%d/%m/%Y')"
+          git push
+
+      - name: Dejar también una copia fuera del repositorio
+        uses: actions/upload-artifact@v4
+        with:
+          name: copia-carta-${{ github.run_number }}
+          path: copias/
+          retention-days: 90
