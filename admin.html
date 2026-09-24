@@ -130,6 +130,7 @@
          font-size:.86rem; margin:14px 0}
 
   [hidden]{display:none !important}
+  .pie-seccion{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px}
   .buscar-admin{display:flex; gap:8px; align-items:center; margin:0 0 12px}
   .buscar-admin input{flex:1 1 auto; margin:0}
   .buscar-admin input::-webkit-search-cancel-button{display:none}
@@ -659,7 +660,12 @@
               </div>
             </div>`).join("") : '<div class="empty">Sin productos todavía.</div>'}
         </div>
-        <button class="btn sm" style="margin-top:12px" data-act="padd" data-id="${c.id}">+ Agregar producto</button>
+        <div class="pie-seccion">
+          <button class="btn sm" data-act="padd" data-id="${c.id}">+ Agregar producto</button>
+          ${items.length > 1
+            ? '<button class="btn sm" data-act="pordenar" data-id="' + c.id + '" title="Ordenar los productos de esta sección alfabéticamente">Ordenar A–Z</button>'
+            : ""}
+        </div>
       </div>`;
     }).join("");
 
@@ -736,7 +742,8 @@
       pdel: () => delProduct(id),
       ptoggle: () => toggle("products", id),
       pup: () => moveProduct(id, -1),
-      pdown: () => moveProduct(id, 1)
+      pdown: () => moveProduct(id, 1),
+      pordenar: () => ordenarSeccion(id)
     };
     if (acts[b.dataset.act]) acts[b.dataset.act]();
   });
@@ -1087,6 +1094,34 @@
     const prod = state.products.find((p) => p.id === id);
     const siblings = state.products.filter((p) => p.category_id === prod.category_id);
     move("products", siblings, id, dir);
+  }
+
+  // Ordena alfabéticamente los productos de una sección, una sola vez.
+  // Después el orden queda guardado como cualquier otro: las flechitas
+  // siguen sirviendo y un producto nuevo cae al final hasta que lo acomodes.
+  async function ordenarSeccion(catId) {
+    const cat = state.categories.find((c) => c.id === catId);
+    if (!cat) return;
+    const items = state.products.filter((p) => p.category_id === catId);
+    if (items.length < 2) return;
+
+    // localeCompare en español: la "á" va con la "a" y "Ñ" después de "N".
+    // numeric para que "Porroncito 340cc" no se cuele antes de "Porroncito 2".
+    const ordenados = items.slice().sort((a, b) =>
+      String(a.name).localeCompare(String(b.name), "es", { sensitivity: "base", numeric: true }));
+
+    const yaEstaba = ordenados.every((p, i) => p.id === items[i].id);
+    if (yaEstaba) return toast("“" + cat.name + "” ya estaba en orden alfabético");
+
+    if (!confirm(
+      "¿Ordenar alfabéticamente los " + items.length + " productos de “" + cat.name + "”?\n\n" +
+      "Quedan así:\n" + ordenados.slice(0, 4).map((p) => "· " + p.name).join("\n") +
+      (ordenados.length > 4 ? "\n· …" : "") +
+      "\n\nSe puede deshacer con las flechitas o restaurando una copia."
+    )) return;
+
+    await persistOrder("products", ordenados);
+    toast("“" + cat.name + "” ordenada de la A a la Z");
   }
 
   /* ================= diseño ================= */
