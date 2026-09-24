@@ -130,6 +130,9 @@
          font-size:.86rem; margin:14px 0}
 
   [hidden]{display:none !important}
+  .buscar-admin{display:flex; gap:8px; align-items:center; margin:0 0 12px}
+  .buscar-admin input{flex:1 1 auto; margin:0}
+  .buscar-admin input::-webkit-search-cancel-button{display:none}
 
   /* firma del desarrollador */
   .firma{margin-top:34px; padding-top:16px; border-top:1px solid var(--line);
@@ -235,6 +238,11 @@
   <!-- ---- pestaña carta ---- -->
   <div id="tab-menu">
     <p class="hint" style="margin-top:16px">Los cambios se publican al instante. Lo que ocultes deja de verse en la carta pública, pero no se borra. Las fotos podés subirlas de cualquier tamaño: el panel las ajusta solo.</p>
+    <div class="buscar-admin">
+      <input type="search" id="qAdmin" autocomplete="off" placeholder="Buscar sección o producto…" aria-label="Buscar sección o producto">
+      <button class="btn sm" id="qAdminClear" type="button" hidden>Limpiar</button>
+    </div>
+    <p class="hint" id="qAdminInfo" style="margin:0 0 12px" hidden></p>
     <button class="btn primary" id="addCat">+ Nueva sección</button>
     <div id="cats"></div>
   </div>
@@ -615,7 +623,7 @@
     }
     box.innerHTML = state.categories.map((c, i) => {
       const items = state.products.filter((p) => p.category_id === c.id);
-      return `<div class="card${c.visible ? "" : " muted"}">
+      return `<div class="card${c.visible ? "" : " muted"}" data-busca="${esc(normalizar(c.name + " " + (c.description || "")))}">
         <div class="cat-head">
           <span class="name">${esc(c.name)} ${c.visible ? "" : '<span class="badge">oculta</span>'}</span>
           <div class="acts">
@@ -636,7 +644,7 @@
         </div>
         <div class="items">
           ${items.length ? items.map((p, j) => `
-            <div class="row${p.visible ? "" : " muted"}">
+            <div class="row${p.visible ? "" : " muted"}" data-busca="${esc(normalizar([p.name, p.description, p.price_note].join(" ")))}">
               <div class="info">
                 <div class="t">${esc(p.name)} ${p.visible ? "" : '<span class="badge">oculto</span>'}</div>
                 ${p.description ? '<div class="d">' + esc(p.description) + "</div>" : ""}
@@ -654,7 +662,62 @@
         <button class="btn sm" style="margin-top:12px" data-act="padd" data-id="${c.id}">+ Agregar producto</button>
       </div>`;
     }).join("");
+
+    filtrarPanel();   // si había una búsqueda escrita, sigue aplicada tras recargar
   }
+
+  /* ---------- buscador del panel ---------- */
+  // Sin acentos y en minúscula: "chipa" encuentra "Chipá".
+  function normalizar(s) {
+    return String(s == null ? "" : s)
+      .normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  }
+
+  function filtrarPanel() {
+    const campo = $("#qAdmin");
+    if (!campo) return;
+    const texto = campo.value;
+    const palabras = normalizar(texto).split(/\s+/).filter(Boolean);
+    const buscando = palabras.length > 0;
+    const coincide = (heno) => palabras.every((w) => heno.indexOf(w) !== -1);
+    let secciones = 0, productos = 0;
+
+    [].slice.call(document.querySelectorAll("#cats .card")).forEach((card) => {
+      // Si coincide el nombre de la sección, se muestra entera.
+      const secCoincide = buscando && coincide(card.dataset.busca || "");
+      let visibles = 0;
+      [].slice.call(card.querySelectorAll(".row")).forEach((row) => {
+        const ok = !buscando || secCoincide || coincide(row.dataset.busca || "");
+        row.hidden = !ok;
+        if (ok) visibles++;
+      });
+      const vacio = card.querySelector(".items .empty");
+      if (vacio) vacio.hidden = buscando;
+      const mostrar = !buscando || secCoincide || visibles > 0;
+      card.hidden = !mostrar;
+      if (buscando && mostrar) { secciones++; productos += visibles; }
+    });
+
+    $("#qAdminClear").hidden = !buscando;
+    const info = $("#qAdminInfo");
+    if (buscando) {
+      info.textContent = secciones === 0
+        ? "Nada con “" + texto.trim() + "”"
+        : productos + (productos === 1 ? " producto" : " productos") + " en " +
+          secciones + (secciones === 1 ? " sección" : " secciones");
+      info.hidden = false;
+    } else {
+      info.hidden = true;
+    }
+  }
+
+  $("#qAdmin").addEventListener("input", filtrarPanel);
+  $("#qAdminClear").addEventListener("click", () => {
+    const campo = $("#qAdmin");
+    campo.value = "";
+    filtrarPanel();
+    campo.focus();
+  });
 
   $("#cats").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-act]");
