@@ -102,10 +102,16 @@
   .row .d{color:var(--soft); font-size:.82rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .row .p{font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right}
   .row .acts{grid-column:1 / -1; justify-content:flex-end}
+  /* Borrar, separado del resto: un dedo gordo no tiene que caer acá
+     queriendo tocar Editar. */
+  .acts .aparte{margin-left:10px}
   .empty{color:var(--soft); font-size:.86rem; padding:12px 0}
   @media (min-width:620px){
     .cat-head .name{flex:1 1 auto}
-    .row{grid-template-columns:1fr auto auto}
+    /* minmax y no 1fr: con muchos botones, la grilla achicaba la columna del
+       producto hasta menos que la miniatura y la foto se montaba sobre el
+       precio. Con un piso, los botones pasan al renglón de abajo. */
+    .row{grid-template-columns:minmax(190px, 1fr) auto auto}
     .row .acts{grid-column:auto}
   }
 
@@ -754,11 +760,11 @@
         <div class="cat-head">
           <span class="name">${esc(c.name)} ${c.visible ? "" : '<span class="badge">oculta</span>'}</span>
           <div class="acts">
+            <button class="btn sm" data-act="cedit" data-id="${c.id}">Editar</button>
             <button class="btn sm icon" data-act="cup" data-id="${c.id}" ${i === 0 ? "disabled" : ""} title="Subir">↑</button>
             <button class="btn sm icon" data-act="cdown" data-id="${c.id}" ${i === state.categories.length - 1 ? "disabled" : ""} title="Bajar">↓</button>
             <button class="btn sm" data-act="ctoggle" data-id="${c.id}">${c.visible ? "Ocultar" : "Mostrar"}</button>
-            <button class="btn sm" data-act="cedit" data-id="${c.id}">Editar</button>
-            <button class="btn sm danger" data-act="cdel" data-id="${c.id}">Borrar</button>
+            <button class="btn sm danger aparte" data-act="cdel" data-id="${c.id}">Borrar</button>
           </div>
         </div>
         ${c.description ? '<p class="hint" style="margin:8px 0 0">' + esc(c.description) + "</p>" : ""}
@@ -780,16 +786,19 @@
                 </div>
               </div>
               <div class="p">${esc(money(p.price, sym))}${p.price_note ? " · " + esc(p.price_note) : ""}</div>
+              <!-- Orden por uso: lo de todos los días primero, lo de contenido
+                   después, y al final lo de orden y salida. Borrar va último
+                   y separado, lejos de Editar. -->
               <div class="acts">
-                <button class="btn sm icon" data-act="pup" data-id="${p.id}" ${j === 0 ? "disabled" : ""} title="Subir">↑</button>
-                <button class="btn sm icon" data-act="pdown" data-id="${p.id}" ${j === items.length - 1 ? "disabled" : ""} title="Bajar">↓</button>
-                <button class="btn sm icon estrella${p.featured ? " activo" : ""}" data-act="pdestacar" data-id="${p.id}" aria-pressed="${!!p.featured}" title="${p.featured ? "Sacar de Los más pedidos" : "Destacar: lo suma a Los más pedidos"}">★</button>
                 <button class="btn sm${p.sold_out ? " activo" : ""}" data-act="pagotado" data-id="${p.id}" title="Marcar que hoy no hay">${p.sold_out ? "Hay" : "Agotado"}</button>
-                <button class="btn sm" data-act="ptoggle" data-id="${p.id}">${p.visible ? "Ocultar" : "Mostrar"}</button>
+                <button class="btn sm" data-act="pedit" data-id="${p.id}">Editar</button>
+                <button class="btn sm icon estrella${p.featured ? " activo" : ""}" data-act="pdestacar" data-id="${p.id}" aria-pressed="${!!p.featured}" title="${p.featured ? "Sacar de Los más pedidos" : "Destacar: lo suma a Los más pedidos"}">★</button>
                 <button class="btn sm" data-act="pfoto" data-id="${p.id}">${p.image_url ? "Cambiar foto" : "Foto"}</button>
                 ${p.image_url ? '<button class="btn sm danger" data-act="pfotodel" data-id="' + p.id + '">Quitar</button>' : ""}
-                <button class="btn sm" data-act="pedit" data-id="${p.id}">Editar</button>
-                <button class="btn sm danger icon" data-act="pdel" data-id="${p.id}" title="Borrar">✕</button>
+                <button class="btn sm icon" data-act="pup" data-id="${p.id}" ${j === 0 ? "disabled" : ""} title="Subir">↑</button>
+                <button class="btn sm icon" data-act="pdown" data-id="${p.id}" ${j === items.length - 1 ? "disabled" : ""} title="Bajar">↓</button>
+                <button class="btn sm" data-act="ptoggle" data-id="${p.id}">${p.visible ? "Ocultar" : "Mostrar"}</button>
+                <button class="btn sm danger icon aparte" data-act="pdel" data-id="${p.id}" title="Borrar">✕</button>
               </div>
             </div>`).join("") : '<div class="empty">Sin productos todavía.</div>'}
         </div>
