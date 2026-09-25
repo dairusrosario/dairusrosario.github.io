@@ -60,8 +60,14 @@
 
   .tabs{display:flex; gap:6px; margin:0 -16px; padding:10px 16px 0; overflow-x:auto}
   .tab{border:1px solid var(--line); background:var(--card); color:var(--soft); border-radius:999px;
-       padding:8px 16px; font:inherit; font-size:.86rem; font-weight:500; cursor:pointer; white-space:nowrap}
+       padding:8px 14px; font:inherit; font-size:.86rem; font-weight:500; cursor:pointer; white-space:nowrap}
   .tab[aria-selected="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  /* En pantallas angostas las cinco solapas tienen que entrar sin scroll:
+     una solapa que no se ve es una solapa que nadie usa. */
+  @media (max-width:420px){
+    .tabs{gap:5px}
+    .tab{padding:7px 11px; font-size:.8rem}
+  }
 
   /* botones */
   button{font:inherit}
@@ -158,6 +164,23 @@
   .destacar .btn{flex:0 0 auto}
   .destacar p{margin:0; font-size:.82rem; line-height:1.5; color:var(--soft)}
   .destacar p b{color:var(--ink); font-weight:600}
+
+  /* números */
+  .cifras{display:flex; gap:10px; flex-wrap:wrap; margin:2px 0 20px}
+  .cifra{flex:1 1 92px; border:1px solid var(--line); border-radius:11px; padding:12px 14px; background:#faf9f7}
+  .cifra b{display:block; font-size:1.5rem; font-variant-numeric:tabular-nums; line-height:1.15}
+  .cifra span{font-size:.74rem; text-transform:uppercase; letter-spacing:.07em; color:var(--soft)}
+  .grafico{display:flex; align-items:flex-end; gap:2px; height:110px;
+           border-bottom:1px solid var(--line); padding-top:4px}
+  .barra{flex:1 1 0; min-width:0; background:var(--ink); border-radius:2px 2px 0 0;
+         min-height:1px; opacity:.85}
+  .barra.hoy{background:var(--accent, #5eb29a); opacity:1}
+  .lista-top{display:flex; flex-direction:column; gap:9px}
+  .top-fila{display:grid; grid-template-columns:1fr auto; gap:3px 10px; align-items:baseline}
+  .top-fila .n{font-size:.92rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .top-fila .v{font-variant-numeric:tabular-nums; font-weight:600; font-size:.92rem}
+  .top-fila .b{grid-column:1 / -1; height:5px; border-radius:3px; background:#eceae6; overflow:hidden}
+  .top-fila .b i{display:block; height:100%; background:var(--ink); opacity:.75}
   .buscar-admin{display:flex; gap:8px; align-items:center; margin:0 0 12px}
   .buscar-admin input{flex:1 1 auto; margin:0}
   .buscar-admin input::-webkit-search-cancel-button{display:none}
@@ -258,6 +281,7 @@
     <button class="tab" role="tab" data-tab="design" aria-selected="false">Diseño</button>
     <button class="tab" role="tab" data-tab="qr" aria-selected="false">QR</button>
     <button class="tab" role="tab" data-tab="backup" aria-selected="false">Copias</button>
+    <button class="tab" role="tab" data-tab="stats" aria-selected="false">Números</button>
   </div>
 
   <!-- aviso de carga / de error, compartido por todas las pestañas -->
@@ -394,6 +418,35 @@
       <input type="file" id="f_backup" accept=".json,application/json">
       <div class="resumen" id="backupResumen" hidden></div>
       <button class="btn danger" id="doRestore" style="width:100%; padding:13px; margin-top:14px" hidden>Restaurar esta copia</button>
+    </div>
+  </div>
+
+  <!-- ---- pestaña números ---- -->
+  <div id="tab-stats" hidden>
+    <div class="card">
+      <h2>Cuántas veces se abrió la carta</h2>
+      <p class="hint">Se cuentan aperturas, no personas: si alguien la abre dos veces en la noche, son dos. No se guarda nada de quién mira.</p>
+      <div class="cifras" id="cifras"></div>
+      <div class="grafico" id="grafico"></div>
+      <p class="hint" style="margin:10px 0 0" id="graficoPie"></p>
+    </div>
+
+    <div class="card">
+      <h2>De dónde entraron</h2>
+      <p class="hint">El QR de las mesas lleva una marca que los distingue de los que abren el enlace desde Instagram o WhatsApp. Si generaste el QR antes de esta función, volvé a generarlo.</p>
+      <div id="origenes"></div>
+    </div>
+
+    <div class="card">
+      <h2>Secciones más miradas</h2>
+      <p class="hint">Una sección cuenta una sola vez por visita, así el que baja hasta el final no infla todo.</p>
+      <div id="topSecciones"></div>
+    </div>
+
+    <div class="card">
+      <h2>Buscaron y no encontraron</h2>
+      <p class="hint">Lo que la gente escribió en el buscador sin obtener resultados. Si algo se repite, o falta en la carta o está con otro nombre.</p>
+      <div id="topBusquedas"></div>
     </div>
   </div>
 
@@ -678,7 +731,8 @@
   /* ================= pestañas ================= */
   $$(".tab").forEach((t) => t.addEventListener("click", () => {
     $$(".tab").forEach((x) => x.setAttribute("aria-selected", x === t));
-    ["menu", "design", "qr", "backup"].forEach((k) => ($("#tab-" + k).hidden = k !== t.dataset.tab));
+    ["menu", "design", "qr", "backup", "stats"].forEach((k) => ($("#tab-" + k).hidden = k !== t.dataset.tab));
+    if (t.dataset.tab === "stats") cargarNumeros();
   }));
 
   /* ================= carta ================= */
@@ -1667,6 +1721,90 @@
     btn.disabled = false; btn.textContent = "Restaurar esta copia";
   });
 
+  /* ================= números ================= */
+  // Todo sale de contadores por día. No hay un solo dato de personas.
+
+  function diaArg(desfase) {
+    const hoy = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }));
+    hoy.setDate(hoy.getDate() - (desfase || 0));
+    const z = (n) => String(n).padStart(2, "0");
+    return hoy.getFullYear() + "-" + z(hoy.getMonth() + 1) + "-" + z(hoy.getDate());
+  }
+
+  function listaTop(filas, total) {
+    if (!filas.length) return '<p class="hint" style="margin:0">Todavía no hay datos.</p>';
+    const tope = Math.max.apply(null, filas.map((f) => f.v)) || 1;
+    return '<div class="lista-top">' + filas.map((f) => {
+      const pct = Math.round((f.v / tope) * 100);
+      const share = total ? " · " + Math.round((f.v / total) * 100) + "%" : "";
+      return '<div class="top-fila"><span class="n">' + esc(f.k) + "</span>" +
+             '<span class="v">' + f.v + esc(share) + "</span>" +
+             '<span class="b"><i style="width:' + pct + '%"></i></span></div>';
+    }).join("") + "</div>";
+  }
+
+  let numerosCargando = false;
+
+  async function cargarNumeros() {
+    if (numerosCargando) return;
+    numerosCargando = true;
+    $("#cifras").innerHTML = '<p class="hint" style="margin:0">Cargando…</p>';
+
+    const desde = diaArg(29);
+    const { data, error } = await db.from("stats").select("*").gte("fecha", desde);
+    numerosCargando = false;
+
+    if (error) {
+      const falta = /relation|does not exist|function/i.test(error.message || "");
+      $("#cifras").innerHTML = '<p class="hint" style="margin:0">' +
+        (falta ? "Todavía no está creada la tabla de números. Corré <b>estadisticas.sql</b> en Supabase."
+               : "No se pudieron cargar los números: " + esc(error.message || "")) + "</p>";
+      ["grafico", "origenes", "topSecciones", "topBusquedas"].forEach((id) => ($("#" + id).innerHTML = ""));
+      return;
+    }
+
+    const filas = data || [];
+    const porDia = {};
+    filas.filter((f) => f.tipo === "apertura")
+         .forEach((f) => (porDia[f.fecha] = (porDia[f.fecha] || 0) + f.contador));
+
+    const dias = [];
+    for (let i = 29; i >= 0; i--) dias.push(diaArg(i));
+    const valores = dias.map((d) => porDia[d] || 0);
+    const hoy = valores[valores.length - 1];
+    const semana = valores.slice(-7).reduce((a, b) => a + b, 0);
+    const mes = valores.reduce((a, b) => a + b, 0);
+
+    $("#cifras").innerHTML =
+      '<div class="cifra"><b>' + hoy + "</b><span>hoy</span></div>" +
+      '<div class="cifra"><b>' + semana + "</b><span>7 días</span></div>" +
+      '<div class="cifra"><b>' + mes + "</b><span>30 días</span></div>";
+
+    const tope = Math.max.apply(null, valores.concat([1]));
+    $("#grafico").innerHTML = valores.map((v, i) =>
+      '<span class="barra' + (i === valores.length - 1 ? " hoy" : "") + '"' +
+      ' style="height:' + Math.max(1, Math.round((v / tope) * 100)) + '%"' +
+      ' title="' + dias[i].split("-").reverse().slice(0, 2).join("/") + ": " + v + '"></span>').join("");
+    $("#graficoPie").textContent = "Del " + dias[0].split("-").reverse().slice(0, 2).join("/") +
+      " al " + dias[dias.length - 1].split("-").reverse().slice(0, 2).join("/") +
+      " · la última barra es hoy · máximo en un día: " + tope;
+
+    const juntar = (tipo) => {
+      const m = {};
+      filas.filter((f) => f.tipo === tipo).forEach((f) => (m[f.clave] = (m[f.clave] || 0) + f.contador));
+      return Object.keys(m).map((k) => ({ k, v: m[k] })).sort((a, b) => b.v - a.v);
+    };
+
+    const orig = juntar("origen");
+    const totalOrig = orig.reduce((a, b) => a + b.v, 0);
+    $("#origenes").innerHTML = listaTop(
+      orig.map((o) => ({ k: o.k === "qr" ? "Escanearon el QR" : "Entraron por un enlace", v: o.v })),
+      totalOrig);
+
+    $("#topSecciones").innerHTML = listaTop(juntar("seccion").slice(0, 12), 0);
+    $("#topBusquedas").innerHTML = listaTop(juntar("busca_sin").slice(0, 12), 0);
+  }
+
   /* ================= QR ================= */
   $("#copyUrl").addEventListener("click", async () => {
     try {
@@ -1708,8 +1846,11 @@
     const box = $("#qrbox");
     box.innerHTML = "";
     box.hidden = false;
+    // El QR lleva una marca en la dirección para poder distinguir, en Números,
+    // a los que escanearon en la mesa de los que entraron por un enlace.
+    // Para el cliente es la misma carta.
     new QRCode(box, {
-      text: url, width: 260, height: 260,
+      text: url + (url.indexOf("?") === -1 ? "?" : "&") + "m=qr", width: 260, height: 260,
       colorDark: "#111111", colorLight: "#ffffff",
       correctLevel: QRCode.CorrectLevel.M
     });
