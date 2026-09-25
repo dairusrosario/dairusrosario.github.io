@@ -786,17 +786,17 @@
                 </div>
               </div>
               <div class="p">${esc(money(p.price, sym))}${p.price_note ? " · " + esc(p.price_note) : ""}</div>
-              <!-- Orden por uso: lo de todos los días primero, lo de contenido
-                   después, y al final lo de orden y salida. Borrar va último
-                   y separado, lejos de Editar. -->
+              <!-- Primero lo que define al producto (destacado, datos, foto,
+                   lugar), después su disponibilidad (agotado y oculto, que van
+                   juntos porque son parientes), y borrar último y separado. -->
               <div class="acts">
-                <button class="btn sm${p.sold_out ? " activo" : ""}" data-act="pagotado" data-id="${p.id}" title="Marcar que hoy no hay">${p.sold_out ? "Hay" : "Agotado"}</button>
-                <button class="btn sm" data-act="pedit" data-id="${p.id}">Editar</button>
                 <button class="btn sm icon estrella${p.featured ? " activo" : ""}" data-act="pdestacar" data-id="${p.id}" aria-pressed="${!!p.featured}" title="${p.featured ? "Sacar de Los más pedidos" : "Destacar: lo suma a Los más pedidos"}">★</button>
+                <button class="btn sm" data-act="pedit" data-id="${p.id}">Editar</button>
                 <button class="btn sm" data-act="pfoto" data-id="${p.id}">${p.image_url ? "Cambiar foto" : "Foto"}</button>
                 ${p.image_url ? '<button class="btn sm danger" data-act="pfotodel" data-id="' + p.id + '">Quitar</button>' : ""}
                 <button class="btn sm icon" data-act="pup" data-id="${p.id}" ${j === 0 ? "disabled" : ""} title="Subir">↑</button>
                 <button class="btn sm icon" data-act="pdown" data-id="${p.id}" ${j === items.length - 1 ? "disabled" : ""} title="Bajar">↓</button>
+                <button class="btn sm${p.sold_out ? " activo" : ""}" data-act="pagotado" data-id="${p.id}" title="Marcar que hoy no hay">${p.sold_out ? "Hay" : "Agotado"}</button>
                 <button class="btn sm" data-act="ptoggle" data-id="${p.id}">${p.visible ? "Ocultar" : "Mostrar"}</button>
                 <button class="btn sm danger icon aparte" data-act="pdel" data-id="${p.id}" title="Borrar">✕</button>
               </div>
