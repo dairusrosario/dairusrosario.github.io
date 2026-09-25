@@ -531,6 +531,61 @@
     }
   }
 
+  /* ---------- conteo ----------
+     Sólo contadores: cuántas veces se abrió la carta, qué secciones se
+     miraron, qué se buscó sin encontrar nada y si entraron por el QR o
+     por un enlace. No se guarda nada de quién mira: ni quién, ni dónde,
+     ni con qué aparato. La base sólo recibe "sumale uno a esto". */
+  const conteo = {
+    db: null,
+    apagado: false,
+    vistas: {},          // una sección se cuenta una sola vez por visita
+
+    marca(clave) {
+      try {
+        const k = "carta_ct_" + clave;
+        if (sessionStorage.getItem(k)) return false;
+        sessionStorage.setItem(k, "1");
+        return true;
+      } catch (e) {
+        if (this.vistas[clave]) return false;
+        this.vistas[clave] = true;
+        return true;
+      }
+    },
+
+    sumar(tipo, clave) {
+      if (this.apagado || !this.db) return;
+      try {
+        this.db.rpc("contar", { p_tipo: tipo, p_clave: String(clave || "-") })
+          .then(() => {}, () => {});        // si falla, la carta sigue igual
+      } catch (e) { /* nunca frena nada */ }
+    },
+
+    arrancar() {
+      if (this.apagado) return;
+      // Con ?imprimir no contamos: es el dueño sacando la hoja para la cocina.
+      if (/[?&]imprimir\b/.test(location.search)) { this.apagado = true; return; }
+      if (!this.marca("apertura")) return;
+      this.sumar("apertura", "-");
+      this.sumar("origen", /[?&]m=qr\b/.test(location.search) ? "qr" : "enlace");
+    },
+
+    seccion(nombre) {
+      if (!nombre || !this.marca("sec:" + nombre)) return;
+      this.sumar("seccion", nombre);
+    },
+
+    // Se espera a que deje de escribir: si no, "s", "su", "sus", "sush"
+    // se guardarían como cuatro búsquedas fallidas distintas.
+    busqueda(texto, hubo) {
+      clearTimeout(this._t);
+      const q = String(texto || "").trim();
+      if (hubo || q.length < 3) return;
+      this._t = setTimeout(() => this.sumar("busca_sin", q.toLowerCase()), 1400);
+    }
+  };
+
   /* ---------- buscador ---------- */
   // Sin acentos y en minúscula: así "cafe" encuentra "Cafetería" y
   // "tiramisu" encuentra "Tiramisú".
@@ -581,6 +636,7 @@
       info.hidden = true;
     }
     medirNav();
+    if (buscando) conteo.busqueda(texto, encontrados > 0);
   }
 
   $("#q").addEventListener("input", (e) => filtrar(e.target.value));
@@ -604,6 +660,7 @@
         if (!en.isIntersecting) return;
         chips.forEach((ch) => ch.setAttribute("aria-current", ch.dataset.target === en.target.id));
         const active = chips.find((ch) => ch.dataset.target === en.target.id);
+        if (active) conteo.seccion(active.textContent.trim());
         if (active && active.scrollIntoView) {
           active.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
         }
@@ -647,11 +704,16 @@
     if (!window.supabase || !window.supabase.createClient) return sinRed("no cargó la librería de Supabase");
 
     const db = window.supabase.createClient(baseUrl(CONFIG.SUPABASE_URL), CONFIG.SUPABASE_ANON_KEY);
+    conteo.db = db;
 
-    // Si el navegador tiene sesión de administrador, ofrecemos la vuelta al panel.
+    // Si el navegador tiene sesión de administrador, ofrecemos la vuelta al panel
+    // y NO contamos la visita: el dueño recargando veinte veces no es un cliente.
     db.auth.getSession()
-      .then(({ data }) => { if (data && data.session) $("#alPanel").hidden = false; })
-      .catch(() => {});
+      .then(({ data }) => {
+        if (data && data.session) { $("#alPanel").hidden = false; conteo.apagado = true; }
+        else conteo.arrancar();
+      })
+      .catch(() => conteo.arrancar());
 
     try {
       const [s, c, p] = await Promise.all([
