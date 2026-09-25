@@ -150,9 +150,14 @@
   .precio-fila.cambiada input[type=number]{border-color:var(--ink); font-weight:600}
   .badge.agot{color:#9a4b3c; border-color:#e8cfcf}
   .btn.activo{background:var(--ink); border-color:var(--ink); color:#fff}
-  /* La estrella de destacado: apagada casi no se ve, encendida canta. */
-  [data-act="pdestacar"]{color:#c9c5bd; font-size:.95rem; line-height:1}
-  [data-act="pdestacar"].activo{color:#f2c14e}
+  /* La estrella de destacado: apagada casi no se ve, encendida canta.
+     Es la misma en la fila del producto y adentro del diálogo. */
+  .btn.estrella{color:#c9c5bd; font-size:.95rem; line-height:1}
+  .btn.estrella.activo{color:#f2c14e}
+  .destacar{display:flex; gap:11px; align-items:flex-start; margin-top:6px}
+  .destacar .btn{flex:0 0 auto}
+  .destacar p{margin:0; font-size:.82rem; line-height:1.5; color:var(--soft)}
+  .destacar p b{color:var(--ink); font-weight:600}
   .buscar-admin{display:flex; gap:8px; align-items:center; margin:0 0 12px}
   .buscar-admin input{flex:1 1 auto; margin:0}
   .buscar-admin input::-webkit-search-cancel-button{display:none}
@@ -440,10 +445,11 @@
       </div>
       <label for="p_cat">Sección</label>
       <select id="p_cat"></select>
-      <label style="display:flex; align-items:center; gap:9px; margin-top:18px; font-weight:400">
-        <input type="checkbox" id="p_featured" style="width:auto; margin:0">
-        Destacado — aparece también arriba de todo, en “Los más pedidos”
-      </label>
+      <label>Destacado</label>
+      <div class="destacar">
+        <button type="button" class="btn sm icon estrella" id="p_estrella" aria-pressed="false" aria-describedby="p_estrellaTxt">★</button>
+        <p id="p_estrellaTxt"></p>
+      </div>
     </div>
     <div class="dlg-foot">
       <button class="btn" value="cancel">Cancelar</button>
@@ -716,7 +722,7 @@
               <div class="acts">
                 <button class="btn sm icon" data-act="pup" data-id="${p.id}" ${j === 0 ? "disabled" : ""} title="Subir">↑</button>
                 <button class="btn sm icon" data-act="pdown" data-id="${p.id}" ${j === items.length - 1 ? "disabled" : ""} title="Bajar">↓</button>
-                <button class="btn sm icon${p.featured ? " activo" : ""}" data-act="pdestacar" data-id="${p.id}" aria-pressed="${!!p.featured}" title="${p.featured ? "Sacar de Los más pedidos" : "Destacar: lo suma a Los más pedidos"}">★</button>
+                <button class="btn sm icon estrella${p.featured ? " activo" : ""}" data-act="pdestacar" data-id="${p.id}" aria-pressed="${!!p.featured}" title="${p.featured ? "Sacar de Los más pedidos" : "Destacar: lo suma a Los más pedidos"}">★</button>
                 <button class="btn sm${p.sold_out ? " activo" : ""}" data-act="pagotado" data-id="${p.id}" title="Marcar que hoy no hay">${p.sold_out ? "Hay" : "Agotado"}</button>
                 <button class="btn sm" data-act="ptoggle" data-id="${p.id}">${p.visible ? "Ocultar" : "Mostrar"}</button>
                 <button class="btn sm" data-act="pedit" data-id="${p.id}">Editar</button>
@@ -1098,7 +1104,22 @@
     $("#p_cat").innerHTML = state.categories.map((c) =>
       `<option value="${c.id}">${esc(c.name)}</option>`).join("");
     $("#p_cat").value = prod ? prod.category_id : catId;
-    $("#p_featured").checked = !!(prod && prod.featured);
+
+    // La misma estrella que en la fila. Acá no guarda sola: queda marcada
+    // y se escribe recién cuando tocás Guardar.
+    let destacado = !!(prod && prod.featured);
+    const estrella = $("#p_estrella");
+    const pintarEstrella = () => {
+      estrella.classList.toggle("activo", destacado);
+      estrella.setAttribute("aria-pressed", String(destacado));
+      estrella.title = destacado ? "Sacar de Los más pedidos" : "Sumar a Los más pedidos";
+      $("#p_estrellaTxt").innerHTML = destacado
+        ? "<b>Destacado.</b> Aparece también arriba de todo, en “Los más pedidos”. Tocá la estrella para sacarlo."
+        : "Tocá la estrella para que aparezca además arriba de todo, en “Los más pedidos”.";
+    };
+    pintarEstrella();
+    estrella.onclick = () => { destacado = !destacado; pintarEstrella(); };
+
     dlg.returnValue = "";
     dlg.showModal();
     dlg.onclose = async () => {
@@ -1112,7 +1133,7 @@
         price: priceRaw === "" ? null : Number(priceRaw),
         price_note: $("#p_note").value.trim(),
         category_id: $("#p_cat").value,
-        featured: $("#p_featured").checked
+        featured: destacado
       };
       let res;
       if (prod) res = await db.from("products").update(body).eq("id", prod.id);
