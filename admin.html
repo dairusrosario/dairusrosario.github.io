@@ -131,6 +131,26 @@
 
   [hidden]{display:none !important}
   .pie-seccion{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px}
+
+  /* diálogo de precios en tanda */
+  .dlg-body.alto{max-height:min(68vh, 560px); overflow-y:auto}
+  .aumento{border:1px solid var(--line); border-radius:11px; padding:12px 14px; margin:4px 0 18px;
+           background:#faf9f7}
+  .aumento label{margin-top:0}
+  .aumento-fila{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .aumento-fila input[type=number]{width:84px; margin:0}
+  .aumento-fila select{width:auto; flex:1 1 150px; margin:0}
+  .precio-fila{display:flex; gap:12px; align-items:center; padding:9px 0;
+               border-bottom:1px solid #f0efec}
+  .precio-fila:last-child{border-bottom:none}
+  .pf-nombre{flex:1 1 auto; min-width:0; font-size:.92rem; line-height:1.35}
+  .pf-nombre small{display:block; color:var(--soft); font-size:.74rem}
+  .precio-fila input[type=number]{width:108px; flex:0 0 auto; margin:0; text-align:right;
+                                  font-variant-numeric:tabular-nums}
+  .precio-fila.cambiada input[type=number]{border-color:var(--ink); font-weight:600}
+  .badge.agot{color:#9a4b3c; border-color:#e8cfcf}
+  .badge.dest{color:var(--accent-text, #2f6152); border-color:#cfe4dd}
+  .btn.activo{background:var(--ink); border-color:var(--ink); color:#fff}
   .buscar-admin{display:flex; gap:8px; align-items:center; margin:0 0 12px}
   .buscar-admin input{flex:1 1 auto; margin:0}
   .buscar-admin input::-webkit-search-cancel-button{display:none}
@@ -244,7 +264,11 @@
       <button class="btn sm" id="qAdminClear" type="button" hidden>Limpiar</button>
     </div>
     <p class="hint" id="qAdminInfo" style="margin:0 0 12px" hidden></p>
-    <button class="btn primary" id="addCat">+ Nueva sección</button>
+    <div class="pie-seccion" style="margin:0 0 4px">
+      <button class="btn primary" id="addCat">+ Nueva sección</button>
+      <button class="btn sm" id="reponerTodo" hidden></button>
+      <button class="btn sm" id="imprimir">Imprimir la carta</button>
+    </div>
     <div id="cats"></div>
   </div>
 
@@ -414,10 +438,45 @@
       </div>
       <label for="p_cat">Sección</label>
       <select id="p_cat"></select>
+      <label style="display:flex; align-items:center; gap:9px; margin-top:18px; font-weight:400">
+        <input type="checkbox" id="p_featured" style="width:auto; margin:0">
+        Destacado — aparece también arriba de todo, en “Los más pedidos”
+      </label>
     </div>
     <div class="dlg-foot">
       <button class="btn" value="cancel">Cancelar</button>
       <button class="btn primary" value="ok">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="preciosDlg">
+  <form method="dialog">
+    <div class="dlg-body alto">
+      <h2 id="preciosTitulo">Precios</h2>
+      <p class="hint">Escribí los precios y guardá. Un casillero vacío deja el producto sin precio: la carta muestra “Consultar”.</p>
+
+      <div class="aumento">
+        <label for="pct">Aumentar todos</label>
+        <div class="aumento-fila">
+          <input type="number" id="pct" step="0.5" inputmode="decimal" placeholder="10">
+          <span>%</span>
+          <select id="redondeo">
+            <option value="100">redondear a $100</option>
+            <option value="50">redondear a $50</option>
+            <option value="10">redondear a $10</option>
+            <option value="1">sin redondear</option>
+          </select>
+          <button class="btn sm" type="button" id="aplicarPct">Aplicar</button>
+        </div>
+        <p class="hint" style="margin:9px 0 0">Aplicar sólo completa los casilleros de abajo, siempre calculando sobre el precio actual. Podés probar otro porcentaje sin que se acumule. Nada se guarda hasta que toques Guardar.</p>
+      </div>
+
+      <div id="preciosLista"></div>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn" value="cancel">Cancelar</button>
+      <button class="btn primary" value="ok" id="preciosSave">Guardar</button>
     </div>
   </form>
 </dialog>
@@ -620,6 +679,7 @@
     const box = $("#cats");
     if (!state.categories.length) {
       box.innerHTML = '<div class="card empty">Todavía no hay secciones. Empezá creando una: “Tragos”, “Cervezas”, “Cocina”…</div>';
+      pintarReponer();
       return;
     }
     box.innerHTML = state.categories.map((c, i) => {
@@ -647,13 +707,14 @@
           ${items.length ? items.map((p, j) => `
             <div class="row${p.visible ? "" : " muted"}" data-busca="${esc(normalizar([p.name, p.description, p.price_note].join(" ")))}">
               <div class="info">
-                <div class="t">${esc(p.name)} ${p.visible ? "" : '<span class="badge">oculto</span>'}</div>
+                <div class="t">${esc(p.name)} ${p.visible ? "" : '<span class="badge">oculto</span>'}${p.sold_out ? ' <span class="badge agot">agotado</span>' : ""}${p.featured ? ' <span class="badge dest">destacado</span>' : ""}</div>
                 ${p.description ? '<div class="d">' + esc(p.description) + "</div>" : ""}
               </div>
               <div class="p">${esc(money(p.price, sym))}${p.price_note ? " · " + esc(p.price_note) : ""}</div>
               <div class="acts">
                 <button class="btn sm icon" data-act="pup" data-id="${p.id}" ${j === 0 ? "disabled" : ""} title="Subir">↑</button>
                 <button class="btn sm icon" data-act="pdown" data-id="${p.id}" ${j === items.length - 1 ? "disabled" : ""} title="Bajar">↓</button>
+                <button class="btn sm${p.sold_out ? " activo" : ""}" data-act="pagotado" data-id="${p.id}" title="Marcar que hoy no hay">${p.sold_out ? "Hay" : "Agotado"}</button>
                 <button class="btn sm" data-act="ptoggle" data-id="${p.id}">${p.visible ? "Ocultar" : "Mostrar"}</button>
                 <button class="btn sm" data-act="pedit" data-id="${p.id}">Editar</button>
                 <button class="btn sm danger icon" data-act="pdel" data-id="${p.id}" title="Borrar">✕</button>
@@ -662,6 +723,9 @@
         </div>
         <div class="pie-seccion">
           <button class="btn sm" data-act="padd" data-id="${c.id}">+ Agregar producto</button>
+          ${items.length
+            ? '<button class="btn sm" data-act="pprecios" data-id="' + c.id + '" title="Cambiar los precios de toda la sección de una vez">Precios en tanda</button>'
+            : ""}
           ${items.length > 1
             ? '<button class="btn sm" data-act="pordenar" data-id="' + c.id + '" title="Ordenar los productos de esta sección alfabéticamente">Ordenar A–Z</button>'
             : ""}
@@ -670,6 +734,7 @@
     }).join("");
 
     filtrarPanel();   // si había una búsqueda escrita, sigue aplicada tras recargar
+    pintarReponer();
   }
 
   /* ---------- buscador del panel ---------- */
@@ -743,7 +808,9 @@
       ptoggle: () => toggle("products", id),
       pup: () => moveProduct(id, -1),
       pdown: () => moveProduct(id, 1),
-      pordenar: () => ordenarSeccion(id)
+      pordenar: () => ordenarSeccion(id),
+      pprecios: () => preciosDialog(id),
+      pagotado: () => toggle("products", id, "sold_out")
     };
     if (acts[b.dataset.act]) acts[b.dataset.act]();
   });
@@ -1027,6 +1094,7 @@
     $("#p_cat").innerHTML = state.categories.map((c) =>
       `<option value="${c.id}">${esc(c.name)}</option>`).join("");
     $("#p_cat").value = prod ? prod.category_id : catId;
+    $("#p_featured").checked = !!(prod && prod.featured);
     dlg.returnValue = "";
     dlg.showModal();
     dlg.onclose = async () => {
@@ -1039,7 +1107,8 @@
         description: $("#p_desc").value.trim(),
         price: priceRaw === "" ? null : Number(priceRaw),
         price_note: $("#p_note").value.trim(),
-        category_id: $("#p_cat").value
+        category_id: $("#p_cat").value,
+        featured: $("#p_featured").checked
       };
       let res;
       if (prod) res = await db.from("products").update(body).eq("id", prod.id);
@@ -1064,11 +1133,14 @@
   }
 
   /* ---- visible / orden ---- */
-  async function toggle(table, id) {
+  async function toggle(table, id, campo) {
+    const col = campo || "visible";
     const list = table === "categories" ? state.categories : state.products;
     const row = list.find((r) => r.id === id);
-    const { error } = await db.from(table).update({ visible: !row.visible }).eq("id", id);
+    if (!row) return;
+    const { error } = await db.from(table).update({ [col]: !row[col] }).eq("id", id);
     if (error) return fail(error);
+    if (col === "sold_out") toast(row[col] ? "Vuelve a estar disponible" : "Marcado como agotado");
     loadAll();
   }
 
@@ -1123,6 +1195,108 @@
     await persistOrder("products", ordenados);
     toast("“" + cat.name + "” ordenada de la A a la Z");
   }
+
+  /* ---------- precios en tanda ---------- */
+
+  function redondear(n, paso) {
+    if (!isFinite(n)) return null;
+    if (!paso || paso <= 1) return Math.round(n);
+    return Math.round(n / paso) * paso;
+  }
+
+  function preciosDialog(catId) {
+    const cat = state.categories.find((c) => c.id === catId);
+    const items = state.products.filter((p) => p.category_id === catId);
+    if (!cat || !items.length) return;
+
+    const dlg = $("#preciosDlg");
+    $("#preciosTitulo").textContent = "Precios · " + cat.name;
+    $("#pct").value = "";
+    $("#preciosLista").innerHTML = items.map((p) => {
+      const actual = p.price == null ? "" : String(p.price);
+      return `<div class="precio-fila">
+        <div class="pf-nombre">${esc(p.name)}
+          <small>${p.price == null ? "sin precio" : "ahora " + esc(money(p.price, state.settings.currency_symbol || "$"))}${p.price_note ? " · " + esc(p.price_note) : ""}</small>
+        </div>
+        <input type="number" min="0" step="1" inputmode="decimal"
+               data-id="${p.id}" data-base="${actual}" value="${actual}">
+      </div>`;
+    }).join("");
+
+    // Marca en vivo los casilleros que quedaron distintos del precio guardado.
+    const marcar = () => $$("#preciosLista input[data-id]").forEach((inp) => {
+      inp.closest(".precio-fila").classList.toggle("cambiada", inp.value !== inp.dataset.base);
+    });
+    $("#preciosLista").oninput = marcar;
+
+    $("#aplicarPct").onclick = () => {
+      const pct = Number($("#pct").value);
+      if (!isFinite(pct) || pct === 0) return toast("Escribí un porcentaje", true);
+      const paso = Number($("#redondeo").value);
+      let tocados = 0;
+      $$("#preciosLista input[data-id]").forEach((inp) => {
+        const base = inp.dataset.base;
+        if (base === "") return;                       // sin precio: no se inventa uno
+        const nuevo = redondear(Number(base) * (1 + pct / 100), paso);
+        if (nuevo == null || nuevo < 0) return;
+        inp.value = String(nuevo);
+        tocados++;
+      });
+      marcar();
+      toast(tocados + (tocados === 1 ? " precio calculado" : " precios calculados") + " · revisá y guardá");
+    };
+
+    dlg.returnValue = "";
+    dlg.showModal();
+
+    dlg.onclose = async () => {
+      if (dlg.returnValue !== "ok") return;
+      const cambios = [];
+      $$("#preciosLista input[data-id]").forEach((inp) => {
+        if (inp.value === inp.dataset.base) return;    // sin tocar: no se reescribe
+        const v = inp.value.trim();
+        if (v !== "" && !isFinite(Number(v))) return;
+        cambios.push({ id: inp.dataset.id, price: v === "" ? null : Number(v) });
+      });
+      if (!cambios.length) return toast("No cambiaste ningún precio");
+
+      const res = await Promise.all(cambios.map((c) =>
+        db.from("products").update({ price: c.price }).eq("id", c.id)));
+      const mal = res.find((r) => r.error);
+      if (mal) return fail(mal.error);
+      toast(cambios.length + (cambios.length === 1 ? " precio actualizado" : " precios actualizados"));
+      loadAll();
+    };
+  }
+
+  /* ---------- reponer todos los agotados ---------- */
+
+  function pintarReponer() {
+    const agotados = state.products.filter((p) => p.sold_out);
+    const btn = $("#reponerTodo");
+    btn.hidden = agotados.length === 0;
+    btn.textContent = "Reponer todo (" + agotados.length + ")";
+  }
+
+  $("#reponerTodo").addEventListener("click", async () => {
+    const agotados = state.products.filter((p) => p.sold_out);
+    if (!agotados.length) return;
+    if (!confirm("¿Marcar como disponibles los " + agotados.length +
+                 " productos agotados?\n\n" +
+                 agotados.slice(0, 5).map((p) => "· " + p.name).join("\n") +
+                 (agotados.length > 5 ? "\n· …" : ""))) return;
+    const res = await Promise.all(agotados.map((p) =>
+      db.from("products").update({ sold_out: false }).eq("id", p.id)));
+    const mal = res.find((r) => r.error);
+    if (mal) return fail(mal.error);
+    toast("Todo disponible de nuevo");
+    loadAll();
+  });
+
+  $("#imprimir").addEventListener("click", () => {
+    const base = location.origin + location.pathname.replace(/[^/]*$/, "");
+    window.open(base + "?imprimir=1", "_blank", "noopener");
+  });
 
   /* ================= diseño ================= */
   // Los dos primeros salen de tu marca: el del logo y el de la carta impresa.
@@ -1327,17 +1501,19 @@
       if (!items.length) {
         L.push("select count(*) from c;");
       } else {
-        L.push("insert into public.products (category_id, name, description, price, price_note, sort_order, visible)");
-        L.push("select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis from c, (values");
+        L.push("insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured)");
+        L.push("select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest from c, (values");
         L.push(items.map((p, j) => "  (" + [
           sqlTxt(p.name),
           sqlTxt(p.description || ""),
           sqlNum(p.price) + (j === 0 ? "::numeric" : ""),
           sqlTxt(p.price_note || ""),
           Number(p.sort_order) || 0,
-          sqlBool(p.visible)
+          sqlBool(p.visible),
+          sqlBool(p.sold_out),
+          sqlBool(p.featured)
         ].join(", ") + ")").join(",\n"));
-        L.push(") as v(name, descr, price, nota, ord, vis);");
+        L.push(") as v(name, descr, price, nota, ord, vis, agot, dest);");
       }
       L.push("");
     });
