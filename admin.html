@@ -149,8 +149,10 @@
                                   font-variant-numeric:tabular-nums}
   .precio-fila.cambiada input[type=number]{border-color:var(--ink); font-weight:600}
   .badge.agot{color:#9a4b3c; border-color:#e8cfcf}
-  .badge.dest{color:var(--accent-text, #2f6152); border-color:#cfe4dd}
   .btn.activo{background:var(--ink); border-color:var(--ink); color:#fff}
+  /* La estrella de destacado: apagada casi no se ve, encendida canta. */
+  [data-act="pdestacar"]{color:#c9c5bd; font-size:.95rem; line-height:1}
+  [data-act="pdestacar"].activo{color:#f2c14e}
   .buscar-admin{display:flex; gap:8px; align-items:center; margin:0 0 12px}
   .buscar-admin input{flex:1 1 auto; margin:0}
   .buscar-admin input::-webkit-search-cancel-button{display:none}
@@ -707,13 +709,14 @@
           ${items.length ? items.map((p, j) => `
             <div class="row${p.visible ? "" : " muted"}" data-busca="${esc(normalizar([p.name, p.description, p.price_note].join(" ")))}">
               <div class="info">
-                <div class="t">${esc(p.name)} ${p.visible ? "" : '<span class="badge">oculto</span>'}${p.sold_out ? ' <span class="badge agot">agotado</span>' : ""}${p.featured ? ' <span class="badge dest">destacado</span>' : ""}</div>
+                <div class="t">${esc(p.name)} ${p.visible ? "" : '<span class="badge">oculto</span>'}${p.sold_out ? ' <span class="badge agot">agotado</span>' : ""}</div>
                 ${p.description ? '<div class="d">' + esc(p.description) + "</div>" : ""}
               </div>
               <div class="p">${esc(money(p.price, sym))}${p.price_note ? " · " + esc(p.price_note) : ""}</div>
               <div class="acts">
                 <button class="btn sm icon" data-act="pup" data-id="${p.id}" ${j === 0 ? "disabled" : ""} title="Subir">↑</button>
                 <button class="btn sm icon" data-act="pdown" data-id="${p.id}" ${j === items.length - 1 ? "disabled" : ""} title="Bajar">↓</button>
+                <button class="btn sm icon${p.featured ? " activo" : ""}" data-act="pdestacar" data-id="${p.id}" aria-pressed="${!!p.featured}" title="${p.featured ? "Sacar de Los más pedidos" : "Destacar: lo suma a Los más pedidos"}">★</button>
                 <button class="btn sm${p.sold_out ? " activo" : ""}" data-act="pagotado" data-id="${p.id}" title="Marcar que hoy no hay">${p.sold_out ? "Hay" : "Agotado"}</button>
                 <button class="btn sm" data-act="ptoggle" data-id="${p.id}">${p.visible ? "Ocultar" : "Mostrar"}</button>
                 <button class="btn sm" data-act="pedit" data-id="${p.id}">Editar</button>
@@ -810,7 +813,8 @@
       pdown: () => moveProduct(id, 1),
       pordenar: () => ordenarSeccion(id),
       pprecios: () => preciosDialog(id),
-      pagotado: () => toggle("products", id, "sold_out")
+      pagotado: () => toggle("products", id, "sold_out"),
+      pdestacar: () => toggle("products", id, "featured")
     };
     if (acts[b.dataset.act]) acts[b.dataset.act]();
   });
@@ -1141,6 +1145,7 @@
     const { error } = await db.from(table).update({ [col]: !row[col] }).eq("id", id);
     if (error) return fail(error);
     if (col === "sold_out") toast(row[col] ? "Vuelve a estar disponible" : "Marcado como agotado");
+    if (col === "featured") toast(row[col] ? "Sale de Los más pedidos" : "Agregado a Los más pedidos");
     loadAll();
   }
 
