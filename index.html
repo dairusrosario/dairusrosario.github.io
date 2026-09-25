@@ -165,6 +165,18 @@
   .item-note{font-size:.75rem; color:var(--ink-soft); margin-left:6px}
   .item-desc{margin:5px 0 0; color:var(--ink-soft); font-size:.88rem; max-width:52ch}
 
+  /* Agotado del día: se sigue viendo, apagado y con cartelito. Ocultarlo
+     haría que el cliente lo pida igual porque lo vio ayer. */
+  .item.agotado{opacity:.48}
+  .item.agotado .item-price{text-decoration:line-through}
+  .agotado-tag{flex:0 0 auto; font-size:.66rem; text-transform:uppercase; letter-spacing:.08em;
+               border:1px solid var(--line); border-radius:999px; padding:2px 9px;
+               color:var(--ink-soft); white-space:nowrap}
+
+  /* Sección de destacados: va primera y no tiene foto propia. */
+  .estrella{width:15px; height:15px; vertical-align:-2px; margin-right:7px;
+            fill:var(--accent); flex:0 0 auto}
+
   /* ---------- pie ---------- */
   footer{margin-top:56px; padding-top:26px; border-top:1px solid var(--line); text-align:center;
          color:var(--ink-soft); font-size:.84rem; line-height:1.7}
@@ -214,6 +226,38 @@
            padding:8px 16px; border-radius:999px; font-size:.76rem; display:none}
   @media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important; scroll-behavior:auto !important}}
   html{scroll-behavior:smooth}
+
+  /* ---------- papel ----------
+     Para la cocina, el mostrador o para cargar la carta en otro lado.
+     Se fuerzan los colores claros: si el mozo tenía el tema oscuro
+     puesto, igual sale una hoja blanca y no un rectángulo negro. */
+  @media print{
+    :root, :root[data-theme="oscuro"], :root[data-theme="claro"]{
+      --bg:#fff; --ink:#111; --ink-soft:#555;
+      --line:#c9c9c9; --line-soft:#e0e0e0; --dots:#bbb;
+      --accent:#1f5c4d; --accent-text:#1f5c4d; --accent-ink:#fff;
+    }
+    @page{margin:14mm 12mm}
+    #bg, nav, footer, .al-panel, .offline, .sec-foto, .rule, #tagline{display:none !important}
+    html, body{background:#fff !important}
+    .wrap{max-width:none; padding:0}
+    header{padding:0 0 6mm; text-align:left; display:flex; align-items:center; gap:10px}
+    #logo{width:52px; height:52px; margin:0}
+    h1{font-size:19pt}
+    main{columns:2; column-gap:9mm}
+    section{padding-top:0; margin:0 0 5mm; break-inside:auto}
+    section.con-foto{padding-top:0}
+    .sec-head{break-after:avoid; padding-bottom:6px; margin-bottom:2px}
+    h2{font-size:11.5pt}
+    h2::after{margin-top:5px}
+    .item{break-inside:avoid; padding:5px 0; font-size:9.5pt}
+    .item-name{font-size:9.5pt}
+    .item-price{font-size:9.5pt}
+    .item-desc{font-size:8pt; margin-top:2px}
+    .item.agotado{opacity:1}
+    .item.agotado .item-name::after{content:" (hoy no hay)"; font-size:8pt; color:#555}
+    .agotado-tag{display:none}
+  }
 </style>
 </head>
 <body>
@@ -404,14 +448,29 @@
     const menu = $("#menu");
     const withItems = cats.filter((c) => prods.some((p) => p.category_id === c.id));
 
+    // Los destacados arman una sección propia arriba de todo. Siguen
+    // apareciendo también en su sección de siempre. Los agotados del día
+    // no entran acá: no tiene sentido empujar algo que hoy no hay.
+    const grupos = withItems.map((c) => ({
+      id: "sec-" + c.id, name: c.name, description: c.description,
+      image_url: c.image_url, items: prods.filter((p) => p.category_id === c.id)
+    }));
+    const destacados = prods.filter((p) => p.featured && !p.sold_out);
+    if (destacados.length) {
+      grupos.unshift({
+        id: "sec-destacados", name: "Los más pedidos", description: "",
+        image_url: null, items: destacados, estrella: true
+      });
+    }
+
     if (!withItems.length) {
       menu.innerHTML = '<div class="state">La carta se está actualizando.<br>Volvé a intentar en un rato.</div>';
       $("#nav").hidden = true;
       return;
     }
 
-    menu.innerHTML = withItems.map((c) => {
-      const items = prods.filter((p) => p.category_id === c.id).map((p) => {
+    menu.innerHTML = grupos.map((c) => {
+      const items = c.items.map((p) => {
         const precio = money(p.price, symbol);
         const nota = p.price_note ? '<span class="item-note">' + esc(p.price_note) + "</span>" : "";
         // Sin precio cargado decimos "Consultar": el hueco vacío se leía como un error.
@@ -420,9 +479,10 @@
           : '<span class="item-price consultar">Consultar' + nota + "</span>");
         const busca = normalizar([p.name, p.description, p.price_note].join(" "));
         return `
-        <article class="item" data-busca="${esc(busca)}">
+        <article class="item${p.sold_out ? " agotado" : ""}" data-busca="${esc(busca)}">
           <div class="item-head">
             <span class="item-name">${esc(p.name)}</span>
+            ${p.sold_out ? '<span class="agotado-tag">Hoy no hay</span>' : ""}
             ${derecha}
           </div>
           ${p.description ? '<p class="item-desc">' + esc(p.description) + "</p>" : ""}
@@ -431,19 +491,22 @@
       const foto = c.image_url
         ? '<img class="sec-foto" src="' + esc(c.image_url) + '" alt="" loading="lazy" decoding="async">'
         : "";
-      return `<section id="sec-${esc(c.id)}" data-busca="${esc(normalizar(c.name + " " + (c.description || "")))}"${c.image_url ? ' class="con-foto"' : ""}>
+      const estrella = c.estrella
+        ? '<svg class="estrella" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.4-5.8-3-5.8 3 1.1-6.4L2.6 9.4l6.5-.9z"/></svg>'
+        : "";
+      return `<section id="${esc(c.id)}" data-busca="${esc(normalizar(c.name + " " + (c.description || "")))}"${c.image_url ? ' class="con-foto"' : ""}>
           ${foto}
           <div class="sec-head">
-            <h2>${esc(c.name)}</h2>
+            <h2>${estrella}${esc(c.name)}</h2>
             ${c.description ? '<p class="sec-desc">' + esc(c.description) + "</p>" : ""}
           </div>${items}
         </section>`;
     }).join("");
 
     const chips = $("#chips");
-    chips.innerHTML = withItems.map((c, i) =>
-      `<button class="chip" data-target="sec-${esc(c.id)}" aria-current="${i === 0}">${esc(c.name)}</button>`).join("");
-    $("#nav").hidden = withItems.length < 2;
+    chips.innerHTML = grupos.map((c, i) =>
+      `<button class="chip" data-target="${esc(c.id)}" aria-current="${i === 0}">${esc(c.name)}</button>`).join("");
+    $("#nav").hidden = grupos.length < 2;
 
     chips.addEventListener("click", (e) => {
       const b = e.target.closest(".chip");
@@ -459,6 +522,13 @@
 
     filtrar($("#q").value);
     setupScrollSpy();
+
+    // Entrando con ?imprimir, la carta se abre directo en el diálogo de
+    // impresión. Es lo que usa el botón del panel.
+    if (/[?&]imprimir\b/.test(location.search) && !render._imprimio) {
+      render._imprimio = true;
+      setTimeout(() => window.print(), 600);
+    }
   }
 
   /* ---------- buscador ---------- */
