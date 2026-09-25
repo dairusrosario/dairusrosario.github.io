@@ -94,7 +94,10 @@
   .row{display:grid; grid-template-columns:1fr auto; align-items:center;
        gap:6px 10px; padding:12px 0; border-bottom:1px solid #f0efec}
   .row:last-child{border-bottom:none}
-  .row .info{min-width:0}
+  .row .info{min-width:0; display:flex; gap:11px; align-items:center}
+  .row .info .txt{min-width:0}
+  .row .mini{width:46px; height:46px; flex:0 0 auto; object-fit:cover;
+             border-radius:8px; border:1px solid var(--line); background:#f0efec}
   .row .t{font-weight:500}
   .row .d{color:var(--soft); font-size:.82rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .row .p{font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right}
@@ -543,6 +546,7 @@
 </dialog>
 
 <input type="file" id="catImgInput" accept="image/*" hidden>
+<input type="file" id="prodImgInput" accept="image/*" hidden>
 
 <dialog id="imgDlg">
   <div class="dlg-body">
@@ -769,8 +773,11 @@
           ${items.length ? items.map((p, j) => `
             <div class="row${p.visible ? "" : " muted"}" data-busca="${esc(normalizar([p.name, p.description, p.price_note].join(" ")))}">
               <div class="info">
-                <div class="t">${esc(p.name)} ${p.visible ? "" : '<span class="badge">oculto</span>'}${p.sold_out ? ' <span class="badge agot">agotado</span>' : ""}</div>
-                ${p.description ? '<div class="d">' + esc(p.description) + "</div>" : ""}
+                ${p.image_url ? '<img class="mini" src="' + esc(p.image_url) + '" alt="" loading="lazy">' : ""}
+                <div class="txt">
+                  <div class="t">${esc(p.name)} ${p.visible ? "" : '<span class="badge">oculto</span>'}${p.sold_out ? ' <span class="badge agot">agotado</span>' : ""}</div>
+                  ${p.description ? '<div class="d">' + esc(p.description) + "</div>" : ""}
+                </div>
               </div>
               <div class="p">${esc(money(p.price, sym))}${p.price_note ? " · " + esc(p.price_note) : ""}</div>
               <div class="acts">
@@ -779,6 +786,8 @@
                 <button class="btn sm icon estrella${p.featured ? " activo" : ""}" data-act="pdestacar" data-id="${p.id}" aria-pressed="${!!p.featured}" title="${p.featured ? "Sacar de Los más pedidos" : "Destacar: lo suma a Los más pedidos"}">★</button>
                 <button class="btn sm${p.sold_out ? " activo" : ""}" data-act="pagotado" data-id="${p.id}" title="Marcar que hoy no hay">${p.sold_out ? "Hay" : "Agotado"}</button>
                 <button class="btn sm" data-act="ptoggle" data-id="${p.id}">${p.visible ? "Ocultar" : "Mostrar"}</button>
+                <button class="btn sm" data-act="pfoto" data-id="${p.id}">${p.image_url ? "Cambiar foto" : "Foto"}</button>
+                ${p.image_url ? '<button class="btn sm danger" data-act="pfotodel" data-id="' + p.id + '">Quitar</button>' : ""}
                 <button class="btn sm" data-act="pedit" data-id="${p.id}">Editar</button>
                 <button class="btn sm danger icon" data-act="pdel" data-id="${p.id}" title="Borrar">✕</button>
               </div>
@@ -874,7 +883,9 @@
       pordenar: () => ordenarSeccion(id),
       pprecios: () => preciosDialog(id),
       pagotado: () => toggle("products", id, "sold_out"),
-      pdestacar: () => toggle("products", id, "featured")
+      pdestacar: () => toggle("products", id, "featured"),
+      pfoto: () => { prodFotoPendiente = id; $("#prodImgInput").click(); },
+      pfotodel: () => quitarFotoProd(id)
     };
     if (acts[b.dataset.act]) acts[b.dataset.act]();
   });
@@ -1033,6 +1044,43 @@
 
   /* ---- foto de fondo de una sección ---- */
   let catFotoPendiente = null;
+
+  /* ---- foto de producto ----
+     Miniatura cuadrada y chica: 400 px alcanza y sobra para un celular,
+     y mantiene el consumo de datos bajo con 170 productos en la carta. */
+  let prodFotoPendiente = null;
+
+  $("#prodImgInput").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    const id = prodFotoPendiente;
+    e.target.value = "";
+    prodFotoPendiente = null;
+    if (!file || !id) return;
+    recortar(file,
+      { aspecto: 1, anchoMax: 400, titulo: "Encuadrar la foto del producto",
+        ayuda: "Se ve como un cuadradito al lado del nombre. Dejá el plato centrado y bien cerca." },
+      async (blob) => {
+        toast("Subiendo foto…");
+        const anterior = (state.products.find((p) => p.id === id) || {}).image_url;
+        try {
+          const url = await upload(blob, "producto");
+          const { error } = await db.from("products").update({ image_url: url }).eq("id", id);
+          if (error) throw error;
+          await borrarArchivo(anterior);
+          toast("Foto lista · " + Math.round(blob.size / 1024) + " KB");
+          loadAll();
+        } catch (err) { fail(err); }
+      });
+  });
+
+  async function quitarFotoProd(id) {
+    const anterior = (state.products.find((p) => p.id === id) || {}).image_url;
+    const { error } = await db.from("products").update({ image_url: null }).eq("id", id);
+    if (error) return fail(error);
+    await borrarArchivo(anterior);
+    toast("Foto quitada");
+    loadAll();
+  }
 
   $("#catImgInput").addEventListener("change", (e) => {
     const file = e.target.files[0];
@@ -1581,8 +1629,8 @@
       if (!items.length) {
         L.push("select count(*) from c;");
       } else {
-        L.push("insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured)");
-        L.push("select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest from c, (values");
+        L.push("insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)");
+        L.push("select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values");
         L.push(items.map((p, j) => "  (" + [
           sqlTxt(p.name),
           sqlTxt(p.description || ""),
@@ -1591,9 +1639,10 @@
           Number(p.sort_order) || 0,
           sqlBool(p.visible),
           sqlBool(p.sold_out),
-          sqlBool(p.featured)
+          sqlBool(p.featured),
+          sqlTxt(p.image_url) + (j === 0 ? "::text" : "")
         ].join(", ") + ")").join(",\n"));
-        L.push(") as v(name, descr, price, nota, ord, vis, agot, dest);");
+        L.push(") as v(name, descr, price, nota, ord, vis, agot, dest, foto);");
       }
       L.push("");
     });
