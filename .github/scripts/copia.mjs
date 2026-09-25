@@ -89,8 +89,8 @@ export function armarSql(data, cuando) {
     if (!items.length) {
       L.push("select count(*) from c;");
     } else {
-      L.push("insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured)");
-      L.push("select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest from c, (values");
+      L.push("insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)");
+      L.push("select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values");
       L.push(items.map((p, j) => "  (" + [
         txt(p.name),
         txt(p.description || ""),
@@ -99,9 +99,10 @@ export function armarSql(data, cuando) {
         Number(p.sort_order) || 0,
         bool(p.visible),
         bool(p.sold_out),
-        bool(p.featured)
+        bool(p.featured),
+        txt(p.image_url) + (j === 0 ? "::text" : "")
       ].join(", ") + ")").join(",\n"));
-      L.push(") as v(name, descr, price, nota, ord, vis, agot, dest);");
+      L.push(") as v(name, descr, price, nota, ord, vis, agot, dest, foto);");
     }
     L.push("");
   });
