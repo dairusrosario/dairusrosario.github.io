@@ -3,7 +3,7 @@
    cuando no hay señal, así un precio actualizado nunca queda viejo.
    Las llamadas a Supabase y a los CDN no se tocan: van derecho a la red. */
 
-const CACHE = "carta-v1";
+const CACHE = "carta-v2";
 const SHELL = [
   "./",
   "./index.html",
@@ -31,12 +31,34 @@ self.addEventListener("activate", (e) => {
   );
 });
 
+/* Las imágenes del depósito de Supabase llevan la fecha en el nombre
+   (seccion-1788574561019.jpg), así que una dirección nunca cambia de
+   contenido: cambiar la foto crea otra dirección. Por eso acá sí se puede
+   guardar para siempre, y el cliente que vuelve al bar no las vuelve a
+   descargar. Con 17 fotos de sección más las de producto, esto es la
+   diferencia entre entrar o no en el plan gratuito. */
+const ES_FOTO = /\/storage\/v1\/object\/public\//;
+
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
 
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return; // Supabase, fuentes, CDN
+
+  if (ES_FOTO.test(url.pathname)) {
+    e.respondWith(
+      caches.open(CACHE).then((c) =>
+        c.match(req).then((hit) =>
+          hit || fetch(req).then((res) => {
+            if (res && (res.ok || res.type === "opaque")) c.put(req, res.clone());
+            return res;
+          })))
+        .catch(() => fetch(req))
+    );
+    return;
+  }
+
+  if (url.origin !== self.location.origin) return; // Supabase (datos), fuentes, CDN
 
   e.respondWith(
     fetch(req)
