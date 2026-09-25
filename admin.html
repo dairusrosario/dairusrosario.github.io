@@ -167,6 +167,38 @@
   .precio-fila input[type=number]{width:108px; flex:0 0 auto; margin:0; text-align:right;
                                   font-variant-numeric:tabular-nums}
   .precio-fila.cambiada input[type=number]{border-color:var(--ink); font-weight:600}
+
+  /* diálogo de importar planilla */
+  dialog.ancho{width:min(780px, 96vw)}
+  .imp-o{display:flex; align-items:center; gap:12px; margin:20px 0 4px; color:var(--soft); font-size:.78rem}
+  .imp-o::before,.imp-o::after{content:""; height:1px; background:var(--line); flex:1 1 auto}
+  #impTexto{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.8rem;
+            white-space:pre; overflow-x:auto; min-height:130px}
+  #impCols{border:1px solid var(--line); border-radius:11px; padding:10px 14px; background:#faf9f7}
+  #impCols summary{cursor:pointer; font-size:.84rem; color:var(--soft)}
+  #impCols summary b{color:var(--ink); font-weight:600}
+  #impCols[open] summary{margin-bottom:2px}
+  .imp-mapa{display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:9px; margin-top:6px}
+  .imp-mapa label{margin:0 0 4px; font-size:.75rem}
+  .imp-mapa select{margin:0}
+  .imp-num{display:flex; flex-wrap:wrap; gap:7px; margin:16px 0 4px}
+  .imp-num span{border:1px solid var(--line); border-radius:999px; padding:5px 11px; font-size:.81rem;
+                color:var(--soft)}
+  .imp-num b{color:var(--ink); font-variant-numeric:tabular-nums}
+  .imp-tabla{border:1px solid var(--line); border-radius:10px; max-height:290px; overflow:auto; margin-top:10px}
+  .imp-tabla table{border-collapse:collapse; width:100%; font-size:.82rem}
+  .imp-tabla th,.imp-tabla td{text-align:left; padding:7px 10px; border-bottom:1px solid #f0efec; vertical-align:top}
+  .imp-tabla th{position:sticky; top:0; z-index:1; background:#faf9f7; font-size:.7rem;
+                text-transform:uppercase; letter-spacing:.06em; color:var(--soft); font-weight:600}
+  .imp-tabla tr:last-child td{border-bottom:none}
+  .imp-tabla td.der{text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap}
+  .imp-tabla tr.sec td{background:#faf9f7; font-weight:600}
+  .imp-tabla td small{color:var(--soft); display:block; font-size:.72rem}
+  .imp-tabla td small.ant{text-decoration:line-through}
+  .et{display:inline-block; font-size:.68rem; padding:2px 8px; border-radius:999px;
+      border:1px solid var(--line); color:var(--soft); white-space:nowrap}
+  .et.nuevo{color:#1f6b45; border-color:#bfe0cd; background:#eff8f3}
+  .et.cambia{color:#8a5a12; border-color:#ecd9b4; background:#fff6e8}
   .badge.agot{color:#9a4b3c; border-color:#e8cfcf}
   .btn.activo{background:var(--ink); border-color:var(--ink); color:#fff}
   /* La estrella de destacado: apagada casi no se ve, encendida canta.
@@ -330,6 +362,7 @@
     <div class="pie-seccion" style="margin:0 0 4px">
       <button class="btn primary" id="addCat">+ Nueva sección</button>
       <button class="btn sm" id="reponerTodo" hidden></button>
+      <button class="btn sm" id="impAbrir">Importar planilla</button>
       <button class="btn sm" id="imprimir">Imprimir la carta</button>
     </div>
     <div id="cats"></div>
@@ -572,6 +605,58 @@
       <button class="btn primary" value="ok" id="preciosSave">Guardar</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="impDlg" class="ancho">
+  <div class="dlg-body alto">
+    <h2>Importar desde una planilla</h2>
+
+    <div id="impPaso1">
+      <p class="hint" style="margin-top:0">Sirve para cargar una carta entera de una vez, o para subir una
+        lista de precios nueva. Busca las columnas <b>Sección · Producto · Descripción · Precio · Nota</b>,
+        en cualquier orden y con el nombre que sea. Vas a ver todo antes de que se guarde nada.</p>
+      <label for="impTexto">Pegar desde la planilla</label>
+      <textarea id="impTexto" rows="7" spellcheck="false"
+        placeholder="Seleccioná las celdas en Excel o Google Sheets, copiá con Ctrl+C y pegá acá con Ctrl+V."></textarea>
+      <p class="hint" style="margin:6px 0 0">Podés incluir el renglón de títulos o no: si no está, toma las
+        columnas en el orden Sección, Producto, Descripción, Precio, Nota.</p>
+
+      <div class="imp-o">o</div>
+
+      <label for="impArchivo" style="margin-top:12px">Subir un archivo</label>
+      <input type="file" id="impArchivo" accept=".csv,.tsv,.txt,.xlsx,.xls,.xlsm">
+      <p class="hint" style="margin:6px 0 0">Excel (.xlsx) o texto (.csv). De un Excel lee la primera hoja.</p>
+      <p class="hint" id="impArchivoInfo" style="margin:8px 0 0" hidden></p>
+
+      <button class="btn primary" id="impLeer" style="width:100%; padding:13px; margin-top:18px">Leer la planilla</button>
+    </div>
+
+    <div id="impPaso2" hidden>
+      <div class="aumento" style="margin:4px 0 16px">
+        <label for="impModo" style="margin-top:0">Qué hacer con la carta que ya está</label>
+        <select id="impModo">
+          <option value="actualizar">Actualizar — cambia los que coinciden y agrega los que faltan</option>
+          <option value="cero">Cargar de cero — borra la carta actual y sube ésta</option>
+        </select>
+        <p class="hint" id="impModoAyuda" style="margin:9px 0 0"></p>
+      </div>
+
+      <details id="impCols">
+        <summary id="impColsResumen">Columnas</summary>
+        <p class="hint" style="margin:8px 0 2px">Elegí a mano la que corresponda a cada una.</p>
+        <div class="imp-mapa" id="impMapa"></div>
+      </details>
+
+      <div class="imp-num" id="impNumeros"></div>
+      <div class="alert" id="impAvisos" hidden></div>
+      <div class="imp-tabla" id="impPrevia"></div>
+    </div>
+  </div>
+  <div class="dlg-foot">
+    <button class="btn" id="impCerrar" type="button">Cancelar</button>
+    <button class="btn" id="impVolver" type="button" hidden>Volver</button>
+    <button class="btn primary" id="impAplicar" type="button" hidden>Importar</button>
+  </div>
 </dialog>
 
 <input type="file" id="catImgInput" accept="image/*" hidden>
@@ -1800,6 +1885,588 @@
       await loadAll();
     } catch (err) { fail(err); }
     btn.disabled = false; btn.textContent = "Restaurar esta copia";
+  });
+
+  /* ================= importar desde una planilla ================= */
+  // Cargar 172 productos a mano es, en horas, lo más caro de dar de alta un bar.
+  // Casi siempre la carta ya existe en un Excel o en un Google Sheets: esto la
+  // toma como viene —columnas en cualquier orden, precios escritos de cualquier
+  // manera— y la sube de una sola vez, mostrando todo antes de tocar la base.
+
+  const IMP_CAMPOS = [
+    { clave: "seccion",     rotulo: "Sección",     alias: ["seccion", "categoria", "rubro", "grupo", "familia", "carta"] },
+    { clave: "nombre",      rotulo: "Producto",    alias: ["producto", "nombre", "item", "articulo", "plato", "descripcion del producto"] },
+    { clave: "descripcion", rotulo: "Descripción", alias: ["descripcion", "detalle", "ingredientes", "observacion", "obs", "contiene"] },
+    { clave: "precio",      rotulo: "Precio",      alias: ["precio", "valor", "importe", "monto", "pvp", "p unitario"] },
+    { clave: "nota",        rotulo: "Nota",        alias: ["nota", "medida", "tamano", "presentacion", "unidad", "aclaracion", "porcion", "ml", "cc"] }
+  ];
+  const IMP_ORDEN_DEFECTO = ["seccion", "nombre", "descripcion", "precio", "nota"];
+  const IMP_MAX_PREVIA = 400;
+
+  let impFilas = [], impCabecera = null, impMapa = {}, impPlan = null;
+
+  /* ---- leer el texto ---- */
+
+  // Un parser de verdad y no un split(","): las descripciones traen comas,
+  // y Excel al copiar mete comillas y saltos de línea adentro de una celda.
+  function impPartirCsv(texto, sep) {
+    const filas = [];
+    let fila = [], campo = "", comillas = false;
+    for (let i = 0; i < texto.length; i++) {
+      const c = texto.charAt(i);
+      if (comillas) {
+        if (c === '"') {
+          if (texto.charAt(i + 1) === '"') { campo += '"'; i++; } else comillas = false;
+        } else campo += c;
+        continue;
+      }
+      if (c === '"' && campo === "") { comillas = true; continue; }
+      if (c === sep) { fila.push(campo); campo = ""; continue; }
+      if (c === "\n" || c === "\r") {
+        if (c === "\r" && texto.charAt(i + 1) === "\n") i++;
+        fila.push(campo); filas.push(fila); fila = []; campo = "";
+        continue;
+      }
+      campo += c;
+    }
+    if (campo !== "" || fila.length) { fila.push(campo); filas.push(fila); }
+    return filas.filter((f) => f.some((v) => String(v == null ? "" : v).trim() !== ""));
+  }
+
+  function impDetectarSep(texto) {
+    const muestra = texto.split(/\r\n|\n|\r/).slice(0, 10).join("\n");
+    const cuenta = (c) => muestra.split(c).length - 1;
+    if (cuenta("\t")) return "\t";          // pegado desde una planilla
+    return cuenta(";") > cuenta(",") ? ";" : ",";
+  }
+
+  // El lector de Excel pesa medio mega: se baja sólo si alguien sube un .xlsx.
+  function impCargarLib() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    if (impCargarLib._p) return impCargarLib._p;
+    const fuentes = [
+      "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
+      "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
+    ];
+    impCargarLib._p = new Promise((ok, mal) => {
+      let i = 0;
+      const probar = () => {
+        if (i >= fuentes.length) {
+          impCargarLib._p = null;
+          return mal(new Error("No se pudo cargar el lector de Excel. Probá copiando las celdas y pegándolas."));
+        }
+        const s = document.createElement("script");
+        s.src = fuentes[i++];
+        s.onload = () => (window.XLSX ? ok(window.XLSX) : probar());
+        s.onerror = probar;
+        document.head.appendChild(s);
+      };
+      probar();
+    });
+    return impCargarLib._p;
+  }
+
+  /* ---- entender las columnas ---- */
+
+  function impBuscarCabecera(primera) {
+    if (!primera) return null;
+    const mapa = {};
+    let aciertos = 0;
+    primera.forEach((celda, i) => {
+      const t = normalizar(celda).trim().replace(/[.:]+$/, "");
+      if (!t) return;
+      IMP_CAMPOS.forEach((c) => {
+        if (mapa[c.clave] !== undefined) return;
+        if (c.alias.some((a) => t === a || t.indexOf(a) === 0)) { mapa[c.clave] = i; aciertos++; }
+      });
+    });
+    return aciertos >= 2 ? mapa : null;
+  }
+
+  function impCargarFilas(filas) {
+    if (!filas || !filas.length) { toast("No encontré nada en la planilla", true); return false; }
+    const conCabecera = impBuscarCabecera(filas[0]);
+    if (conCabecera) {
+      impCabecera = filas[0]; impFilas = filas.slice(1); impMapa = conCabecera;
+    } else {
+      impCabecera = null; impFilas = filas; impMapa = {};
+      const ancho = Math.max.apply(null, filas.map((f) => f.length));
+      IMP_ORDEN_DEFECTO.forEach((k, i) => { if (i < ancho) impMapa[k] = i; });
+    }
+    if (!impFilas.length) { toast("La planilla sólo tiene el renglón de títulos", true); return false; }
+    if (impMapa.nombre === undefined) { toast("No encuentro la columna de productos", true); return false; }
+    return true;
+  }
+
+  /* ---- entender los precios ---- */
+  // "$ 12.500", "12500", "1.250,50", "12,5", "s/p", "Consultar", 12500 (número
+  // de Excel). Regla: con un solo separador seguido de tres dígitos es de miles,
+  // porque acá 12.500 son doce mil quinientos y no doce pesos con medio.
+  function impPrecio(v) {
+    if (v == null) return { valor: null, ok: true };
+    if (typeof v === "number") {
+      return isFinite(v) && v >= 0 ? { valor: Math.round(v * 100) / 100, ok: true } : { valor: null, ok: false };
+    }
+    let s = String(v).trim();
+    if (!s) return { valor: null, ok: true };
+
+    const plano = normalizar(s).replace(/[\s.$]/g, "");
+    if (/^(s\/p|sp|consultar|aconsultar|s\/d|sd|na|n\/a|-+|_+)$/.test(plano)) return { valor: null, ok: true };
+
+    s = s.replace(/[^\d.,]/g, "");
+    if (!s) return { valor: null, ok: false };
+
+    const punto = s.lastIndexOf("."), coma = s.lastIndexOf(",");
+    if (punto !== -1 && coma !== -1) {
+      s = coma > punto ? s.replace(/\./g, "").replace(",", ".") : s.replace(/,/g, "");
+    } else if (punto !== -1 || coma !== -1) {
+      const sep = punto !== -1 ? "." : ",";
+      const partes = s.split(sep);
+      const ultima = partes[partes.length - 1];
+      s = (partes.length > 2 || ultima.length === 3) ? partes.join("") : partes.join(".");
+    }
+    const n = Number(s);
+    if (!isFinite(n) || n < 0) return { valor: null, ok: false };
+    return { valor: Math.round(n * 100) / 100, ok: true };
+  }
+
+  /* ---- armar el plan ---- */
+
+  const impIgualPrecio = (a, b) =>
+    (a == null && b == null) || (a != null && b != null && Number(a) === Number(b));
+
+  function impArmarPlan() {
+    const modo = $("#impModo").value;
+    const texto = (fila, clave) => {
+      const i = impMapa[clave];
+      if (i === undefined) return "";
+      const v = fila[i];
+      return v == null ? "" : String(v).trim();
+    };
+    const crudo = (fila, clave) => {
+      const i = impMapa[clave];
+      return i === undefined ? null : fila[i];
+    };
+
+    const avisos = [], secciones = [], porNombre = {}, vistos = {};
+    let ultima = null, descartadas = 0;
+
+    impFilas.forEach((fila, n) => {
+      const linea = n + 1 + (impCabecera ? 1 : 0);
+      const sNom = texto(fila, "seccion");
+      const pNom = texto(fila, "nombre");
+      if (!sNom && !pNom) { descartadas++; return; }
+
+      let sec = null;
+      if (sNom) {
+        const clave = normalizar(sNom);
+        sec = porNombre[clave];
+        if (!sec) {
+          sec = { nombre: sNom, descripcion: "", items: [] };
+          porNombre[clave] = sec;
+          secciones.push(sec);
+        }
+        ultima = sec;
+      } else {
+        // planilla con la sección escrita una sola vez y las filas de abajo vacías
+        sec = ultima;
+        if (!sec) {
+          avisos.push("Fila " + linea + ": no sé a qué sección va “" + pNom + "”.");
+          descartadas++; return;
+        }
+      }
+
+      if (!pNom) {                       // fila de sección sola: es su bajada
+        const d = texto(fila, "descripcion");
+        if (d) sec.descripcion = d;
+        return;
+      }
+
+      const clave = normalizar(sec.nombre) + "\u0000" + normalizar(pNom);
+      if (vistos[clave]) {
+        avisos.push("Fila " + linea + ": “" + pNom + "” aparece dos veces en la planilla; queda el de abajo.");
+        sec.items = sec.items.filter((it) => it.clave !== clave);
+      }
+      vistos[clave] = true;
+
+      const pr = impPrecio(crudo(fila, "precio"));
+      if (!pr.ok) {
+        avisos.push("Fila " + linea + ": no entendí el precio “" + texto(fila, "precio") + "”. Queda sin precio.");
+      }
+      sec.items.push({
+        clave: clave, nombre: pNom,
+        descripcion: texto(fila, "descripcion"),
+        precio: pr.valor,
+        nota: texto(fila, "nota")
+      });
+    });
+
+    // Una sección sin un solo producto casi siempre es basura al pie de la
+    // planilla ("Actualizado 12/03", una nota suelta, un total). No se crea,
+    // pero se avisa: si era a propósito, la sección se agrega desde el panel.
+    for (let i = secciones.length - 1; i >= 0; i--) {
+      if (!secciones[i].items.length) {
+        avisos.push("“" + secciones[i].nombre + "” no tiene ningún producto: no se crea esa sección.");
+        secciones.splice(i, 1);
+      }
+    }
+
+    // cruce con lo que ya está cargado
+    const catPorId = {}, secExist = {}, prodExist = {};
+    state.categories.forEach((c) => { catPorId[c.id] = c; secExist[normalizar(c.name)] = c; });
+    state.products.forEach((p) => {
+      const c = catPorId[p.category_id];
+      if (c) prodExist[normalizar(c.name) + "\u0000" + normalizar(p.name)] = p;
+    });
+
+    const tienePrecio = impMapa.precio !== undefined;
+    const tieneDesc = impMapa.descripcion !== undefined;
+    const tieneNota = impMapa.nota !== undefined;
+    const deCero = modo === "cero";
+
+    let nuevos = 0, cambian = 0, iguales = 0, sinPrecio = 0, total = 0, secNuevas = 0, tocados = {};
+
+    secciones.forEach((sec) => {
+      sec.existente = deCero ? null : (secExist[normalizar(sec.nombre)] || null);
+      sec.nueva = !sec.existente;
+      if (sec.nueva) secNuevas++;
+      sec.items.forEach((it) => {
+        total++;
+        if (it.precio == null) sinPrecio++;
+        const vieja = deCero ? null : prodExist[it.clave];
+        it.existente = vieja || null;
+        if (!vieja) { it.estado = "nuevo"; nuevos++; return; }
+        tocados[vieja.id] = true;
+        const cambia =
+          (tienePrecio && !impIgualPrecio(vieja.price, it.precio)) ||
+          (tieneDesc && String(vieja.description || "") !== it.descripcion) ||
+          (tieneNota && String(vieja.price_note || "") !== it.nota);
+        it.estado = cambia ? "cambia" : "igual";
+        if (cambia) cambian++; else iguales++;
+      });
+    });
+
+    const fuera = deCero ? state.products.length
+                         : state.products.filter((p) => !tocados[p.id]).length;
+
+    return {
+      modo: modo, secciones: secciones, avisos: avisos, descartadas: descartadas,
+      nuevos: nuevos, cambian: cambian, iguales: iguales, sinPrecio: sinPrecio,
+      total: total, secNuevas: secNuevas, fuera: fuera,
+      tienePrecio: tienePrecio, tieneDesc: tieneDesc, tieneNota: tieneNota
+    };
+  }
+
+  /* ---- pintar ---- */
+
+  function impPintarMapa() {
+    const ancho = Math.max.apply(null, impFilas.map((f) => f.length).concat([1]));
+    $("#impMapa").innerHTML = IMP_CAMPOS.map((c) => {
+      let ops = '<option value="">— ninguna —</option>';
+      for (let i = 0; i < ancho; i++) {
+        const titulo = impCabecera && impCabecera[i] ? String(impCabecera[i]).trim() : "";
+        ops += '<option value="' + i + '"' + (impMapa[c.clave] === i ? " selected" : "") + ">" +
+               esc(titulo || "Columna " + (i + 1)) + "</option>";
+      }
+      return '<div><label for="impCol_' + c.clave + '">' + esc(c.rotulo) + "</label>" +
+             '<select id="impCol_' + c.clave + '" data-campo="' + c.clave + '">' + ops + "</select></div>";
+    }).join("");
+    $$("#impMapa select").forEach((s) => s.addEventListener("change", () => {
+      const v = s.value;
+      if (v === "") delete impMapa[s.getAttribute("data-campo")];
+      else impMapa[s.getAttribute("data-campo")] = Number(v);
+      impResumirMapa();
+      impPintarPrevia();
+    }));
+    impResumirMapa();
+    // Si reconoció lo importante, el detalle arranca cerrado: casi nadie
+    // necesita tocarlo y ocupa media pantalla.
+    $("#impCols").open = !(impMapa.seccion !== undefined && impMapa.nombre !== undefined &&
+                           impMapa.precio !== undefined);
+  }
+
+  function impResumirMapa() {
+    const puestas = IMP_CAMPOS.filter((c) => impMapa[c.clave] !== undefined).map((c) => c.rotulo);
+    const faltan = IMP_CAMPOS.filter((c) => impMapa[c.clave] === undefined &&
+                                            c.clave !== "descripcion" && c.clave !== "nota")
+                             .map((c) => c.rotulo);
+    $("#impColsResumen").innerHTML = faltan.length
+      ? "Falta indicar: <b>" + esc(faltan.join(", ")) + "</b> — tocá para elegir las columnas"
+      : "Columnas reconocidas: <b>" + esc(puestas.join(" · ")) + "</b> — tocá para cambiarlas";
+  }
+
+  function impPintarPrevia() {
+    impPlan = impArmarPlan();
+    const p = impPlan, deCero = p.modo === "cero";
+    const sym = state.settings.currency_symbol || "$";
+
+    $("#impModoAyuda").innerHTML = deCero
+      ? "Borra <b>todo</b> lo que hay y sube la planilla en su lugar. Antes de borrar se descarga sola " +
+        "una copia. Es el modo para dar de alta un bar nuevo."
+      : "Cruza por sección y nombre, y cambia sólo lo que trae la planilla: " +
+        "<b>no toca fotos, destacados, agotados, ocultos ni el orden</b>. " +
+        "Lo que no figura queda como está.";
+
+    const chips = [];
+    chips.push("<span><b>" + p.secciones.length + "</b> secciones" +
+               (!deCero && p.secNuevas ? " · <b>" + p.secNuevas + "</b> nuevas" : "") + "</span>");
+    chips.push("<span><b>" + p.total + "</b> productos en la planilla</span>");
+    if (deCero) {
+      chips.push("<span>reemplazan a <b>" + state.products.length + "</b> de ahora</span>");
+    } else {
+      chips.push("<span><b>" + p.nuevos + "</b> se agregan</span>");
+      chips.push("<span><b>" + p.cambian + "</b> cambian</span>");
+      chips.push("<span><b>" + p.iguales + "</b> ya estaban igual</span>");
+      if (p.fuera) chips.push("<span><b>" + p.fuera + "</b> no figuran: quedan como están</span>");
+    }
+    if (p.sinPrecio) chips.push('<span><b>' + p.sinPrecio + "</b> sin precio → “Consultar”</span>");
+    $("#impNumeros").innerHTML = chips.join("");
+
+    const avisos = p.avisos.slice(0, 12);
+    if (p.avisos.length > 12) avisos.push("…y " + (p.avisos.length - 12) + " avisos más.");
+    if (p.descartadas) avisos.push(p.descartadas + " fila(s) vacías o sin producto, salteadas.");
+    $("#impAvisos").hidden = avisos.length === 0;
+    $("#impAvisos").innerHTML = avisos.map((a) => esc(a)).join("<br>");
+
+    const L = ['<table><thead><tr><th>Producto</th><th class="der">Precio</th>' +
+               "<th>" + (deCero ? "" : "Estado") + "</th></tr></thead><tbody>"];
+    let puestas = 0, cortado = false;
+    p.secciones.forEach((sec) => {
+      if (cortado) return;
+      L.push('<tr class="sec"><td colspan="2">' + esc(sec.nombre) +
+             (sec.descripcion ? "<small>" + esc(sec.descripcion) + "</small>" : "") + "</td><td>" +
+             (!deCero && sec.nueva ? '<span class="et nuevo">sección nueva</span>' : "") + "</td></tr>");
+      sec.items.forEach((it) => {
+        if (puestas >= IMP_MAX_PREVIA) { cortado = true; return; }
+        puestas++;
+        const et = deCero || it.estado === "nuevo"
+          ? (deCero ? "" : '<span class="et nuevo">nuevo</span>')
+          : (it.estado === "cambia" ? '<span class="et cambia">cambia</span>' : '<span class="et">igual</span>');
+        let precio = it.precio == null ? "Consultar" : money(it.precio, sym);
+        if (it.estado === "cambia" && p.tienePrecio && it.existente &&
+            !impIgualPrecio(it.existente.price, it.precio)) {
+          precio = '<small class="ant">' +
+                   esc(it.existente.price == null ? "Consultar" : money(it.existente.price, sym)) +
+                   "</small>" + esc(precio);
+        } else precio = esc(precio);
+        L.push("<tr><td>" + esc(it.nombre) +
+               (it.descripcion ? "<small>" + esc(it.descripcion) + "</small>" : "") +
+               (it.nota ? "<small>" + esc(it.nota) + "</small>" : "") +
+               '</td><td class="der">' + precio + "</td><td>" + et + "</td></tr>");
+      });
+    });
+    if (cortado) L.push('<tr><td colspan="3"><small>La vista previa muestra los primeros ' +
+                        IMP_MAX_PREVIA + ". Se importa todo igual.</small></td></tr>");
+    L.push("</tbody></table>");
+    $("#impPrevia").innerHTML = L.join("");
+
+    const btn = $("#impAplicar");
+    btn.disabled = p.total === 0;
+    btn.className = "btn " + (deCero ? "danger" : "primary");
+    btn.textContent = deCero ? "Borrar todo e importar"
+      : (p.nuevos + p.cambian === 0 ? "No hay nada que cambiar"
+         : "Aplicar " + (p.nuevos + p.cambian) + " cambio" + (p.nuevos + p.cambian === 1 ? "" : "s"));
+    if (!deCero && p.nuevos + p.cambian === 0) btn.disabled = true;
+  }
+
+  /* ---- guardar ---- */
+
+  async function impEscribir() {
+    const p = impPlan;
+    if (!p) return;
+    const btn = $("#impAplicar");
+    const rotulo = btn.textContent;
+    btn.disabled = true;
+
+    try {
+      if (p.modo === "cero") {
+        if (!confirm(
+          "Vas a borrar la carta de ahora (" + state.categories.length + " secciones, " +
+          state.products.length + " productos) y subir la planilla (" + p.secciones.length +
+          " secciones, " + p.total + " productos).\n\nSe descarga una copia antes de borrar. " +
+          "Las fotos de los productos actuales se pierden.\n\nNo se puede deshacer."
+        )) { btn.disabled = false; return; }
+
+        // copia de seguridad automática: ésta es la única operación de todo el
+        // panel que borra la carta entera sin que haya un archivo del que volver.
+        if (state.categories.length) {
+          btn.textContent = "Guardando una copia…";
+          const data = await leerTodo();
+          const base = "antes-de-importar-" + selloFecha();
+          bajar(base + ".json", JSON.stringify({
+            formato: "carta-bar", version: COPIA_VERSION, generado: new Date().toISOString(),
+            bar: data.settings.bar_name || "", settings: data.settings,
+            categories: data.categories, products: data.products
+          }, null, 2), "application/json");
+          await new Promise((r) => setTimeout(r, 900));
+          bajar(base + ".sql", armarSql(data), "text/plain");
+          await new Promise((r) => setTimeout(r, 600));
+        }
+
+        btn.textContent = "Importando…";
+        let r = await db.from("products").delete().not("id", "is", null);
+        if (r.error) throw r.error;
+        r = await db.from("categories").delete().not("id", "is", null);
+        if (r.error) throw r.error;
+
+        const ins = await db.from("categories").insert(p.secciones.map((s, i) => ({
+          name: s.nombre, description: s.descripcion || "", sort_order: i + 1, visible: true
+        }))).select();
+        if (ins.error) throw ins.error;
+        const idPorNombre = {};
+        (ins.data || []).forEach((c) => { idPorNombre[normalizar(c.name)] = c.id; });
+
+        const prods = [];
+        p.secciones.forEach((s) => {
+          const cid = idPorNombre[normalizar(s.nombre)];
+          if (!cid) return;
+          s.items.forEach((it, j) => prods.push({
+            category_id: cid, name: it.nombre, description: it.descripcion || "",
+            price: it.precio, price_note: it.nota || "", sort_order: j + 1, visible: true
+          }));
+        });
+        for (let i = 0; i < prods.length; i += 100) {
+          const r2 = await db.from("products").insert(prods.slice(i, i + 100));
+          if (r2.error) throw r2.error;
+        }
+        toast(p.secciones.length + " secciones y " + prods.length + " productos importados");
+
+      } else {
+        btn.textContent = "Importando…";
+
+        // 1. secciones que no existían
+        const nuevasSec = p.secciones.filter((s) => s.nueva);
+        if (nuevasSec.length) {
+          let tope = state.categories.reduce((m, c) => Math.max(m, Number(c.sort_order) || 0), 0);
+          const ins = await db.from("categories").insert(nuevasSec.map((s, i) => ({
+            name: s.nombre, description: s.descripcion || "", sort_order: tope + i + 1, visible: true
+          }))).select();
+          if (ins.error) throw ins.error;
+          const idPorNombre = {};
+          (ins.data || []).forEach((c) => { idPorNombre[normalizar(c.name)] = c.id; });
+          nuevasSec.forEach((s) => { s.catId = idPorNombre[normalizar(s.nombre)]; });
+        }
+        p.secciones.forEach((s) => { if (!s.catId && s.existente) s.catId = s.existente.id; });
+
+        // 2. productos nuevos, al final de su sección
+        const altas = [];
+        p.secciones.forEach((s) => {
+          if (!s.catId) return;
+          let orden = state.products.filter((x) => x.category_id === s.catId)
+            .reduce((m, x) => Math.max(m, Number(x.sort_order) || 0), 0);
+          s.items.forEach((it) => {
+            if (it.estado !== "nuevo") return;
+            orden++;
+            altas.push({
+              category_id: s.catId, name: it.nombre, description: it.descripcion || "",
+              price: it.precio, price_note: it.nota || "", sort_order: orden, visible: true
+            });
+          });
+        });
+        for (let i = 0; i < altas.length; i += 100) {
+          const r = await db.from("products").insert(altas.slice(i, i + 100));
+          if (r.error) throw r.error;
+        }
+
+        // 3. los que cambian: sólo las columnas que la planilla trae de verdad.
+        // Si no hay columna Descripción, no se toca la descripción de nadie.
+        const cambios = [];
+        p.secciones.forEach((s) => s.items.forEach((it) => {
+          if (it.estado !== "cambia" || !it.existente) return;
+          const body = {};
+          if (p.tienePrecio) body.price = it.precio;
+          if (p.tieneDesc) body.description = it.descripcion || "";
+          if (p.tieneNota) body.price_note = it.nota || "";
+          if (Object.keys(body).length) cambios.push({ id: it.existente.id, body: body });
+        }));
+        for (let i = 0; i < cambios.length; i += 20) {
+          const res = await Promise.all(cambios.slice(i, i + 20)
+            .map((c) => db.from("products").update(c.body).eq("id", c.id)));
+          const mal = res.filter((x) => x.error)[0];
+          if (mal) throw mal.error;
+        }
+
+        toast(altas.length + " agregados · " + cambios.length + " actualizados");
+      }
+
+      $("#impDlg").close();
+      await loadAll();
+    } catch (err) {
+      fail(err);
+      btn.disabled = false;
+      btn.textContent = rotulo;
+    }
+  }
+
+  /* ---- cableado ---- */
+
+  function impReset() {
+    impFilas = []; impCabecera = null; impMapa = {}; impPlan = null;
+    $("#impPaso1").hidden = false;
+    $("#impPaso2").hidden = true;
+    $("#impVolver").hidden = true;
+    $("#impAplicar").hidden = true;
+    $("#impAplicar").disabled = false;
+    $("#impTexto").value = "";
+    $("#impArchivo").value = "";
+    $("#impArchivoInfo").hidden = true;
+    $("#impModo").value = state.products.length ? "actualizar" : "cero";
+    $("#impDlg").querySelector(".dlg-body").scrollTop = 0;
+  }
+
+  function impMostrarPaso2() {
+    $("#impPaso1").hidden = true;
+    $("#impPaso2").hidden = false;
+    $("#impVolver").hidden = false;
+    $("#impAplicar").hidden = false;
+    impPintarMapa();
+    impPintarPrevia();
+    $("#impDlg").querySelector(".dlg-body").scrollTop = 0;
+  }
+
+  $("#impAbrir").addEventListener("click", () => { impReset(); $("#impDlg").showModal(); });
+  $("#impCerrar").addEventListener("click", () => $("#impDlg").close());
+  $("#impVolver").addEventListener("click", () => {
+    $("#impPaso1").hidden = false;
+    $("#impPaso2").hidden = true;
+    $("#impVolver").hidden = true;
+    $("#impAplicar").hidden = true;
+  });
+  $("#impModo").addEventListener("change", impPintarPrevia);
+  $("#impAplicar").addEventListener("click", impEscribir);
+
+  $("#impLeer").addEventListener("click", () => {
+    const txt = $("#impTexto").value;
+    if (!txt.trim()) return toast("Pegá las celdas o elegí un archivo", true);
+    const filas = impPartirCsv(txt, impDetectarSep(txt));
+    if (impCargarFilas(filas)) impMostrarPaso2();
+  });
+
+  $("#impArchivo").addEventListener("change", async (e) => {
+    const f = e.target.files[0];
+    const info = $("#impArchivoInfo");
+    if (!f) { info.hidden = true; return; }
+    info.hidden = false;
+    info.textContent = f.name + " — leyendo…";
+    try {
+      let filas = null;
+      if (/\.(xlsx|xls|xlsm)$/i.test(f.name)) {
+        const XLSX = await impCargarLib();
+        const libro = XLSX.read(new Uint8Array(await f.arrayBuffer()), { type: "array" });
+        const hoja = libro.Sheets[libro.SheetNames[0]];
+        if (!hoja) throw new Error("El archivo no tiene ninguna hoja con datos.");
+        filas = XLSX.utils.sheet_to_json(hoja, { header: 1, raw: true, defval: "" })
+          .filter((fi) => fi.some((v) => String(v == null ? "" : v).trim() !== ""));
+      } else {
+        const txt = await f.text();
+        filas = impPartirCsv(txt, impDetectarSep(txt));
+      }
+      info.textContent = f.name + " — " + filas.length + " filas";
+      if (impCargarFilas(filas)) impMostrarPaso2();
+    } catch (err) {
+      info.textContent = (err && err.message) || "No se pudo leer el archivo";
+      console.error(err);
+    }
   });
 
   /* ================= números ================= */
