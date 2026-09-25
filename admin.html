@@ -64,9 +64,13 @@
   .tab[aria-selected="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
   /* En pantallas angostas las cinco solapas tienen que entrar sin scroll:
      una solapa que no se ve es una solapa que nadie usa. */
-  @media (max-width:420px){
+  @media (max-width:480px){
     .tabs{gap:5px}
-    .tab{padding:7px 11px; font-size:.8rem}
+    .tab{padding:7px 10px; font-size:.8rem}
+  }
+  @media (max-width:384px){
+    .tabs{gap:4px}
+    .tab{padding:6px 8px; font-size:.77rem}
   }
 
   /* botones */
@@ -190,9 +194,25 @@
   .top-fila .v{font-variant-numeric:tabular-nums; font-weight:600; font-size:.92rem}
   .top-fila .b{grid-column:1 / -1; height:5px; border-radius:3px; background:#eceae6; overflow:hidden}
   .top-fila .b i{display:block; height:100%; background:var(--ink); opacity:.75}
-  .buscar-admin{display:flex; gap:8px; align-items:center; margin:0 0 12px}
-  .buscar-admin input{flex:1 1 auto; margin:0}
+  .buscar-admin{display:flex; gap:8px; align-items:stretch; margin:0 0 12px}
+  .buscar-admin .campo{
+    flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:11px;
+    border:1px solid var(--line); border-radius:12px; background:var(--card);
+    padding:0 15px; transition:border-color .18s, box-shadow .18s;
+  }
+  .buscar-admin .campo:focus-within{
+    border-color:var(--ink); box-shadow:0 0 0 3px rgba(28,27,25,.08);
+  }
+  .buscar-admin svg{width:17px; height:17px; flex:0 0 auto; fill:none;
+                    stroke:var(--soft); stroke-width:1.9; stroke-linecap:round}
+  .buscar-admin .campo:focus-within svg{stroke:var(--ink)}
+  .buscar-admin input{
+    flex:1 1 auto; min-width:0; border:0; background:transparent; margin:0;
+    padding:14px 0; font:inherit; font-size:.95rem; outline:none; border-radius:0;
+  }
+  .buscar-admin input::placeholder{color:var(--soft)}
   .buscar-admin input::-webkit-search-cancel-button{display:none}
+  .buscar-admin .btn{flex:0 0 auto}
 
   /* firma del desarrollador */
   .firma{margin-top:34px; padding-top:16px; border-top:1px solid var(--line);
@@ -289,8 +309,8 @@
     <button class="tab" role="tab" data-tab="menu" aria-selected="true">Carta</button>
     <button class="tab" role="tab" data-tab="design" aria-selected="false">Diseño</button>
     <button class="tab" role="tab" data-tab="qr" aria-selected="false">QR</button>
-    <button class="tab" role="tab" data-tab="backup" aria-selected="false">Copias</button>
-    <button class="tab" role="tab" data-tab="stats" aria-selected="false">Números</button>
+    <button class="tab" role="tab" data-tab="stats" aria-selected="false">Estadísticas</button>
+    <button class="tab" role="tab" data-tab="backup" aria-selected="false">Backup</button>
   </div>
 
   <!-- aviso de carga / de error, compartido por todas las pestañas -->
@@ -300,7 +320,10 @@
   <div id="tab-menu">
     <p class="hint" style="margin-top:16px">Los cambios se publican al instante. Lo que ocultes deja de verse en la carta pública, pero no se borra. Las fotos podés subirlas de cualquier tamaño: el panel las ajusta solo.</p>
     <div class="buscar-admin">
-      <input type="search" id="qAdmin" autocomplete="off" placeholder="Buscar sección o producto…" aria-label="Buscar sección o producto">
+      <div class="campo">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5l-4-4"/></svg>
+        <input type="search" id="qAdmin" autocomplete="off" placeholder="Buscar sección o producto…" aria-label="Buscar sección o producto">
+      </div>
       <button class="btn sm" id="qAdminClear" type="button" hidden>Limpiar</button>
     </div>
     <p class="hint" id="qAdminInfo" style="margin:0 0 12px" hidden></p>
