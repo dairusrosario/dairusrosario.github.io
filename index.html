@@ -154,6 +154,13 @@
 
   .item{padding:16px 0; border-bottom:1px solid var(--line-soft)}
   .item:last-child, .item.ultimo{border-bottom:none}
+  /* Con foto el producto se parte en dos columnas. Sin foto queda igual que
+     siempre, así una sección donde sólo algunos tienen foto no se desarma:
+     el nombre y el precio siguen en la misma línea. */
+  .item.con-foto{display:flex; gap:13px; align-items:flex-start}
+  .item-foto{width:74px; height:74px; flex:0 0 auto; object-fit:cover; border-radius:10px;
+             background:var(--line-soft); cursor:zoom-in; border:1px solid var(--line-soft)}
+  .item.con-foto .item-cuerpo{flex:1 1 auto; min-width:0}
   .item-head{display:flex; align-items:baseline; gap:10px}
   .item-name{font-weight:500; font-size:1.02rem; color:var(--ink)}
   .dots{flex:1 1 auto; height:0; border-bottom:1px dotted var(--dots); transform:translateY(-4px); min-width:14px}
@@ -221,6 +228,13 @@
     font-size:.78rem; font-weight:500; letter-spacing:.08em; text-transform:uppercase;
     box-shadow:0 8px 24px rgba(0,0,0,.28);
   }
+  /* Ampliar la foto de un producto al tocarla */
+  .lupa{position:fixed; inset:0; z-index:30; display:none; place-items:center;
+        background:rgba(12,10,9,.86); padding:22px; cursor:zoom-out}
+  .lupa.abierta{display:grid}
+  .lupa img{max-width:min(520px, 100%); max-height:78vh; border-radius:14px; object-fit:contain;
+            box-shadow:0 20px 60px rgba(0,0,0,.45)}
+  .lupa p{margin:16px 0 0; color:#f4efe7; font-size:.95rem; text-align:center; max-width:34ch}
   .offline{position:fixed; left:50%; transform:translateX(-50%); bottom:16px; z-index:9;
            background:var(--aviso); border:1px solid var(--line); color:#f2ede5;
            padding:8px 16px; border-radius:999px; font-size:.76rem; display:none}
@@ -256,7 +270,11 @@
     .item-desc{font-size:8pt; margin-top:2px}
     .item.agotado{opacity:1}
     .item.agotado .item-name::after{content:" (hoy no hay)"; font-size:8pt; color:#555}
-    .agotado-tag{display:none}
+    .agotado-tag, .lupa{display:none}
+    /* En papel las fotos de producto no van: gastan tinta y la hoja es
+       para la cocina o el mostrador, no para vender. */
+    .item-foto{display:none}
+    .item.con-foto{display:block}
   }
 </style>
 </head>
@@ -280,6 +298,9 @@
   </nav>
   <main id="menu"><div class="state"><div class="spinner"></div>Cargando la carta…</div></main>
   <footer id="footer" hidden></footer>
+</div>
+<div class="lupa" id="lupa" role="dialog" aria-modal="true" aria-label="Foto del producto" hidden>
+  <div><img id="lupaImg" alt=""><p id="lupaPie"></p></div>
 </div>
 <div class="offline" id="offline">Sin conexión — mostrando la última carta guardada</div>
 <a class="al-panel" id="alPanel" href="admin.html" hidden>Administración</a>
@@ -478,14 +499,20 @@
           ? '<span class="item-price">' + esc(precio) + nota + "</span>"
           : '<span class="item-price consultar">Consultar' + nota + "</span>");
         const busca = normalizar([p.name, p.description, p.price_note].join(" "));
-        return `
-        <article class="item${p.sold_out ? " agotado" : ""}" data-busca="${esc(busca)}">
+        const cuerpo = `
           <div class="item-head">
             <span class="item-name">${esc(p.name)}</span>
             ${p.sold_out ? '<span class="agotado-tag">Hoy no hay</span>' : ""}
             ${derecha}
           </div>
-          ${p.description ? '<p class="item-desc">' + esc(p.description) + "</p>" : ""}
+          ${p.description ? '<p class="item-desc">' + esc(p.description) + "</p>" : ""}`;
+        if (!p.image_url) {
+          return `<article class="item${p.sold_out ? " agotado" : ""}" data-busca="${esc(busca)}">${cuerpo}</article>`;
+        }
+        return `
+        <article class="item con-foto${p.sold_out ? " agotado" : ""}" data-busca="${esc(busca)}">
+          <img class="item-foto" src="${esc(p.image_url)}" alt="${esc(p.name)}" loading="lazy" decoding="async">
+          <div class="item-cuerpo">${cuerpo}</div>
         </article>`;
       }).join("");
       const foto = c.image_url
@@ -638,6 +665,25 @@
     medirNav();
     if (buscando) conteo.busqueda(texto, encontrados > 0);
   }
+
+  /* ---------- ampliar una foto ---------- */
+  const lupa = $("#lupa");
+  function cerrarLupa() {
+    lupa.classList.remove("abierta");
+    lupa.hidden = true;
+    $("#lupaImg").removeAttribute("src");
+  }
+  $("#menu").addEventListener("click", (e) => {
+    const foto = e.target.closest(".item-foto");
+    if (!foto) return;
+    $("#lupaImg").src = foto.src;
+    $("#lupaImg").alt = foto.alt || "";
+    $("#lupaPie").textContent = foto.alt || "";
+    lupa.hidden = false;
+    lupa.classList.add("abierta");
+  });
+  lupa.addEventListener("click", cerrarLupa);
+  addEventListener("keydown", (e) => { if (e.key === "Escape") cerrarLupa(); });
 
   $("#q").addEventListener("input", (e) => filtrar(e.target.value));
   $("#qClear").addEventListener("click", () => {
