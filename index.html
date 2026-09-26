@@ -189,6 +189,7 @@
   /* ---------- secciones ---------- */
   /* El alto de la barra pegajosa lo mide el script: así el salto a una sección
      cae en el lugar justo aunque la barra cambie de alto. */
+  main{display:flex; flex-direction:column}
   section{padding-top:44px; scroll-margin-top:calc(var(--nav-h, 74px) + 8px); position:relative}
   /* Foto de la sección: se muestra entera, a todo el ancho, arriba del título. */
   section.con-foto{padding-top:0}
@@ -315,7 +316,7 @@
     header{padding:0 0 6mm; text-align:left; display:flex; align-items:center; gap:10px}
     #logo{width:52px; height:52px; margin:0}
     h1{font-size:19pt}
-    main{columns:2; column-gap:9mm}
+    main{display:block; columns:2; column-gap:9mm}
     section{padding-top:0; margin:0 0 5mm; break-inside:auto}
     section.con-foto{padding-top:0}
     .sec-head{break-after:avoid; padding-bottom:6px; margin-bottom:2px}
@@ -540,16 +541,18 @@
      puede estar en varias, y la que no está tildada en ninguna aparece en
      todas — así una sección nueva nunca desaparece por un olvido.
      Con menos de dos opciones, todo esto queda apagado y no se nota. */
-  const OPC = { lista: [], deSeccion: {}, activo: false, actual: null, _mem: null };
+  const OPC = { lista: [], deSeccion: {}, orden: {}, activo: false, actual: null, _mem: null };
 
   function leerOpciones(data) {
     OPC.lista = (data.opciones || [])
       .filter((o) => o && o.visible !== false)
       .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
     OPC.deSeccion = {};
+    OPC.orden = {};          // orden[opción][sección] = posición
     (data.enlaces || []).forEach((e) => {
       if (!e || !e.category_id) return;
       (OPC.deSeccion[e.category_id] = OPC.deSeccion[e.category_id] || []).push(e.opcion_id);
+      (OPC.orden[e.opcion_id] = OPC.orden[e.opcion_id] || {})[e.category_id] = Number(e.sort_order) || 0;
     });
     OPC.activo = OPC.lista.length >= 2;
     if (!OPC.activo) OPC.actual = null;
@@ -661,8 +664,30 @@
   }
 
   function aplicarOpcion() {
+    ordenarPorOpcion();
     filtrar($("#q").value);     // es quien decide qué secciones se ven
     actualizarChips();
+  }
+
+  // Cada opción tiene su propio orden, así que "Bebidas sin alcohol" puede ir
+  // tercera en una y última en otra. Se acomoda con el orden de CSS en vez de
+  // volver a dibujar: la carta entera sigue en la página y el buscador puede
+  // seguir mirando en todas las opciones.
+  function ordenarPorOpcion() {
+    if (!OPC.activo) return;
+    const orden = OPC.orden[OPC.actual] || {};
+    const ubicar = (el, cat, global, destacado) => {
+      if (destacado) return -1;                       // los más pedidos, siempre arriba
+      if (orden[cat] != null) return orden[cat];
+      return 1000 + global;                           // no es de esta opción: al fondo
+    };
+    [].slice.call(document.querySelectorAll("main section")).forEach((sec) => {
+      const n = ubicar(sec, sec.dataset.cat || "", Number(sec.dataset.global) || 0,
+                       sec.id.indexOf("sec-destacados") === 0);
+      sec.style.order = n;
+      const chip = document.querySelector('.chip[data-target="' + sec.id.replace(/"/g, '\\"') + '"]');
+      if (chip) chip.style.order = n;
+    });
   }
 
   // Los atajos de arriba son sólo de la opción que se está mirando.
@@ -695,7 +720,7 @@
     // no entran acá: no tiene sentido empujar algo que hoy no hay.
     const grupos = withItems.map((c) => ({
       id: "sec-" + c.id, name: c.name, description: c.description,
-      image_url: c.image_url, secId: c.id,
+      image_url: c.image_url, secId: c.id, global: (c.sort_order || 0),
       opciones: OPC.deSeccion[c.id] || [],      // vacío = aparece en todas
       etiqueta: etiquetaDe(c.id),
       items: prods.filter((p) => p.category_id === c.id)
@@ -768,7 +793,7 @@
       const etiqueta = c.etiqueta || "";
       const marca = etiqueta ? ' data-carta="' + esc(etiqueta) + '"' : "";
       const chapita = etiqueta ? '<span class="de-otra">' + esc(etiqueta) + "</span>" : "";
-      return `<section id="${esc(c.id)}" data-opciones="${esc((c.opciones || []).join(" "))}" data-busca="${esc(normalizar(c.name + " " + (c.description || "")))}"${c.image_url ? ' class="con-foto"' : ""}>
+      return `<section id="${esc(c.id)}" data-opciones="${esc((c.opciones || []).join(" "))}" data-cat="${esc(c.secId || "")}" data-global="${Number(c.global) || 0}" data-busca="${esc(normalizar(c.name + " " + (c.description || "")))}"${c.image_url ? ' class="con-foto"' : ""}>
           ${foto}
           <div class="sec-head">
             <h2${marca}>${estrella}${esc(c.name)}${chapita}</h2>
