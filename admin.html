@@ -380,6 +380,7 @@
       </div>
     </div>
 
+    <p class="hint" id="avisoOrden" style="margin:0 0 10px" hidden></p>
     <div class="pie-seccion" style="margin:0 0 4px">
       <button class="btn primary" id="addCat">+ Nueva sección</button>
       <button class="btn sm" id="reponerTodo" hidden></button>
@@ -551,6 +552,20 @@
 </div>
 
 <!-- ============ MODALES ============ -->
+<dialog id="ordenDlg">
+  <form method="dialog">
+    <div class="dlg-body alto">
+      <h2 id="ordenDlgTitle">Ordenar secciones</h2>
+      <p class="hint" style="margin-top:0" id="ordenDlgHint"></p>
+      <div id="ordenLista"></div>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn" value="cancel">Cancelar</button>
+      <button class="btn primary" value="ok" id="ordenSave">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="opcDlg">
   <form method="dialog">
     <div class="dlg-body">
@@ -918,6 +933,13 @@
   /* ================= carta ================= */
   function renderMenu() {
     const sym = state.settings.currency_symbol || "$";
+    const aviso = $("#avisoOrden");
+    if (aviso) {
+      aviso.hidden = !hayOpciones();
+      aviso.innerHTML = "Cada opción tiene su propio orden de secciones. Se cambia desde " +
+        "<b>Opciones → Ordenar</b>, así podés ubicar una misma sección en un lugar " +
+        "distinto en cada carta.";
+    }
     const box = $("#cats");
     if (!state.categories.length) {
       box.innerHTML = '<div class="card empty">Todavía no hay secciones. Empezá creando una: “Tragos”, “Cervezas”, “Cocina”…</div>';
@@ -931,8 +953,8 @@
           <span class="name">${esc(c.name)} ${c.visible ? "" : '<span class="badge">oculta</span>'}${etiquetaCarta(c)}</span>
           <div class="acts">
             <button class="btn sm" data-act="cedit" data-id="${c.id}">Editar</button>
-            <button class="btn sm icon" data-act="cup" data-id="${c.id}" ${i === 0 ? "disabled" : ""} title="Subir">↑</button>
-            <button class="btn sm icon" data-act="cdown" data-id="${c.id}" ${i === state.categories.length - 1 ? "disabled" : ""} title="Bajar">↓</button>
+            ${hayOpciones() ? "" : `<button class="btn sm icon" data-act="cup" data-id="${c.id}" ${i === 0 ? "disabled" : ""} title="Subir">↑</button>
+            <button class="btn sm icon" data-act="cdown" data-id="${c.id}" ${i === state.categories.length - 1 ? "disabled" : ""} title="Bajar">↓</button>`}
             <button class="btn sm" data-act="ctoggle" data-id="${c.id}">${c.visible ? "Ocultar" : "Mostrar"}</button>
             <button class="btn sm danger aparte" data-act="cdel" data-id="${c.id}">Borrar</button>
           </div>
@@ -1048,6 +1070,7 @@
     const id = b.dataset.id;
     const acts = {
       oedit: () => opcDialog((state.opciones || []).find((o) => o.id === id)),
+      oorden: () => ordenDialog(id),
       ofoto: () => { opcFotoPendiente = id; $("#opcImgInput").click(); },
       ofotodel: () => quitarFotoOpc(id),
       odel: () => delOpcion(id),
@@ -1426,6 +1449,7 @@
         (sueltas ? " + " + sueltas + " en todas" : "") + "</small></div>" +
         '<div class="acts">' +
         '<button class="btn sm" data-act="oedit" data-id="' + o.id + '">Editar</button>' +
+        '<button class="btn sm" data-act="oorden" data-id="' + o.id + '">Ordenar secciones</button>' +
         '<button class="btn sm" data-act="ofoto" data-id="' + o.id + '">' +
           (o.image_url ? "Cambiar foto" : "Foto") + "</button>" +
         (o.image_url ? '<button class="btn sm danger" data-act="ofotodel" data-id="' + o.id + '">Quitar</button>' : "") +
@@ -1439,6 +1463,78 @@
       box.innerHTML += '<p class="hint" style="margin:10px 0 0">Con una sola opción la carta se ve entera ' +
         "y el cliente no elige nada. Hace falta una segunda para que aparezca la pantalla de elección.</p>";
     }
+  }
+
+  /* ---- ordenar las secciones dentro de una opción ----
+     Cada opción tiene su propio orden, así que una sección que está en las
+     dos puede ir tercera en una y última en la otra. */
+  function seccionesDe(opcId) {
+    const pos = {};
+    (state.enlaces || []).forEach((e) => {
+      if (e.opcion_id === opcId) pos[e.category_id] = Number(e.sort_order) || 0;
+    });
+    return (state.categories || [])
+      .filter((c) => pos[c.id] != null)
+      .sort((a, b) => (pos[a.id] - pos[b.id]) || ((a.sort_order || 0) - (b.sort_order || 0)));
+  }
+
+  function ordenDialog(opcId) {
+    const opc = (state.opciones || []).find((o) => o.id === opcId);
+    if (!opc) return;
+    let lista = seccionesDe(opcId);
+    const dlg = $("#ordenDlg");
+    $("#ordenDlgTitle").textContent = "Ordenar " + opc.name;
+    $("#ordenDlgHint").textContent = lista.length
+      ? "Es el orden en que se ven dentro de esta opción. Las otras opciones no se tocan."
+      : "Esta opción todavía no tiene ninguna sección. Asignalas desde el botón Editar de cada sección.";
+
+    const pintar = () => {
+      $("#ordenLista").innerHTML = lista.map((c, i) => {
+        const otras = (state.enlaces || []).filter((e) => e.category_id === c.id).length - 1;
+        return '<div class="precio-fila">' +
+          '<div class="pf-nombre">' + esc(c.name) +
+          (otras > 0 ? "<small>también está en otra opción, con su propio lugar</small>" : "") +
+          "</div>" +
+          '<div class="acts">' +
+          '<button class="btn sm icon" type="button" data-mov="-1" data-i="' + i + '"' +
+            (i === 0 ? " disabled" : "") + ' title="Subir">↑</button>' +
+          '<button class="btn sm icon" type="button" data-mov="1" data-i="' + i + '"' +
+            (i === lista.length - 1 ? " disabled" : "") + ' title="Bajar">↓</button>' +
+          "</div></div>";
+      }).join("");
+    };
+    pintar();
+
+    $("#ordenLista").onclick = (e) => {
+      const b = e.target.closest("button[data-mov]");
+      if (!b) return;
+      const i = Number(b.dataset.i), j = i + Number(b.dataset.mov);
+      if (j < 0 || j >= lista.length) return;
+      lista.splice(j, 0, lista.splice(i, 1)[0]);
+      pintar();
+    };
+
+    dlg.returnValue = "";
+    dlg.showModal();
+    dlg.onclose = async () => {
+      if (dlg.returnValue !== "ok") return;
+      const antes = seccionesDe(opcId).map((c) => c.id).join(",");
+      if (antes === lista.map((c) => c.id).join(",")) return;   // no movió nada
+      const btn = $("#ordenSave");
+      btn.disabled = true;
+      try {
+        for (let i = 0; i < lista.length; i += 20) {
+          const res = await Promise.all(lista.slice(i, i + 20).map((c, k) =>
+            db.from("categoria_opcion").update({ sort_order: i + k + 1 })
+              .eq("category_id", c.id).eq("opcion_id", opcId)));
+          const mal = res.filter((r) => r.error)[0];
+          if (mal) throw mal.error;
+        }
+        toast("Orden guardado");
+        loadAll();
+      } catch (err) { fail(err); }
+      btn.disabled = false;
+    };
   }
 
   function opcDialog(opc) {
@@ -1482,17 +1578,29 @@
     loadAll();
   }
 
-  // Guardar en qué opciones va una sección: se borra lo que había y se
-  // escribe lo tildado. Son dos o tres filas, no vale la pena afinarlo.
+  // Guardar en qué opciones va una sección. Se tocan sólo las que cambiaron:
+  // si la sección ya estaba en una opción, conserva el lugar que tenía ahí.
   async function guardarOpcionesDeSeccion(catId, elegidas) {
-    const antes = opcionesDe(catId).slice().sort().join(",");
-    const ahora = elegidas.slice().sort().join(",");
-    if (antes === ahora) return null;
-    let r = await db.from("categoria_opcion").delete().eq("category_id", catId);
-    if (r.error) return r.error;
-    if (elegidas.length) {
-      r = await db.from("categoria_opcion")
-        .insert(elegidas.map((o) => ({ category_id: catId, opcion_id: o })));
+    const antes = opcionesDe(catId);
+    const quitar = antes.filter((o) => elegidas.indexOf(o) === -1);
+    const sumar  = elegidas.filter((o) => antes.indexOf(o) === -1);
+    if (!quitar.length && !sumar.length) return null;
+
+    for (let i = 0; i < quitar.length; i++) {
+      const r = await db.from("categoria_opcion").delete()
+        .eq("category_id", catId).eq("opcion_id", quitar[i]);
+      if (r.error) return r.error;
+    }
+
+    if (sumar.length) {
+      // la sección nueva entra al final de cada opción que la suma
+      const tope = {};
+      (state.enlaces || []).forEach((e) => {
+        tope[e.opcion_id] = Math.max(tope[e.opcion_id] || 0, Number(e.sort_order) || 0);
+      });
+      const r = await db.from("categoria_opcion").insert(sumar.map((o) => ({
+        category_id: catId, opcion_id: o, sort_order: (tope[o] || 0) + 1
+      })));
       if (r.error) return r.error;
     }
     return null;
@@ -1526,9 +1634,12 @@
       if (!name) return;
 
       const body = { name, description: $("#c_desc").value.trim() };
-      const elegidas = hayOpciones()
+      let elegidas = hayOpciones()
         ? [].slice.call(document.querySelectorAll("#c_opciones input:checked")).map((i) => i.value)
         : null;
+      // Sin tildar ninguna quiere decir "en todas": se guarda así, con su
+      // lugar propio en cada una, para poder ordenarla distinto en cada opción.
+      if (elegidas && !elegidas.length) elegidas = state.opciones.map((o) => o.id);
       const destino = $("#c_posRow").hidden
         ? otras.length
         : Math.max(0, Math.min(otras.length, Number($("#c_pos").value) || 0));
@@ -2060,9 +2171,9 @@
 
     if (enlaces.length) {
       L.push("-- en qué opción aparece cada sección (sin fila = en todas)");
-      L.push("insert into public.categoria_opcion (category_id, opcion_id) values");
-      L.push(enlaces.map((e) => "  (" + sqlTxt(e.category_id) + ", " + sqlTxt(e.opcion_id) + ")")
-        .join(",\n") + ";");
+      L.push("insert into public.categoria_opcion (category_id, opcion_id, sort_order) values");
+      L.push(enlaces.map((e) => "  (" + sqlTxt(e.category_id) + ", " + sqlTxt(e.opcion_id) +
+        ", " + (Number(e.sort_order) || 0) + ")").join(",\n") + ";");
       L.push("");
     }
 
