@@ -544,7 +544,8 @@
      puede estar en varias, y la que no está tildada en ninguna aparece en
      todas — así una sección nueva nunca desaparece por un olvido.
      Con menos de dos opciones, todo esto queda apagado y no se nota. */
-  const OPC = { lista: [], deSeccion: {}, orden: {}, activo: false, actual: null, _mem: null };
+  const OPC = { lista: [], deSeccion: {}, orden: {}, activo: false, elegir: false,
+               actual: null, _mem: null };
 
   function leerOpciones(data) {
     OPC.lista = (data.opciones || [])
@@ -557,7 +558,12 @@
       (OPC.deSeccion[e.category_id] = OPC.deSeccion[e.category_id] || []).push(e.opcion_id);
       (OPC.orden[e.opcion_id] = OPC.orden[e.opcion_id] || {})[e.category_id] = Number(e.sort_order) || 0;
     });
-    OPC.activo = OPC.lista.length >= 2;
+    // Dos cosas distintas: "activo" es si hay que filtrar por opción, y
+    // "elegir" es si hay que preguntarle al cliente cuál quiere. Al ocultar
+    // una de dos opciones queda una sola: no hay nada que preguntar, pero la
+    // carta igual tiene que mostrar sólo lo de la que quedó.
+    OPC.activo = OPC.lista.length >= 1;
+    OPC.elegir = OPC.lista.length >= 2;
     if (!OPC.activo) OPC.actual = null;
   }
 
@@ -567,7 +573,7 @@
   // Los nombres de las opciones de una sección, para el cartelito del
   // buscador y para el papel. Vacío si aparece en todas.
   function etiquetaDe(secId) {
-    if (!OPC.activo) return "";
+    if (!OPC.elegir) return "";
     const suyas = OPC.deSeccion[secId];
     if (!suyas || !suyas.length || suyas.length === OPC.lista.length) return "";
     return OPC.lista.filter((o) => suyas.indexOf(o.id) !== -1).map((o) => o.name).join(" · ");
@@ -578,6 +584,16 @@
     const lista = (sec.dataset.opciones || "").trim();
     if (!lista) return true;                       // sin tildar: va en todas
     return lista.split(/\s+/).indexOf(opcId) !== -1;
+  }
+
+  // Una sección de una opción apagada no existe para el cliente: tampoco
+  // tiene que aparecer buscando, que es la única puerta que quedaba abierta.
+  function seccionBuscable(sec) {
+    if (!OPC.activo) return true;
+    const lista = (sec.dataset.opciones || "").trim();
+    if (!lista) return true;
+    const ids = lista.split(/\s+/);
+    return OPC.lista.some((o) => ids.indexOf(o.id) !== -1);
   }
 
   function recordarOpcion(id) {
@@ -592,9 +608,12 @@
 
   function prepararOpciones(grupos, s) {
     const port = $("#portada"), cambiar = $("#cambiar");
-    if (!OPC.activo) {
+    if (!OPC.activo || !OPC.elegir) {
       port.hidden = true; cambiar.hidden = true;
       document.body.classList.remove("dos-cartas", "portada-abierta");
+      // Queda una sola opción visible (o se ocultaron todas menos una):
+      // sin pantalla de elección, pero mostrando sólo lo de esa opción.
+      if (OPC.activo) { OPC.actual = OPC.lista[0].id; aplicarOpcion(); }
       return;
     }
     document.body.classList.add("dos-cartas");
@@ -663,7 +682,7 @@
     [].slice.call(document.querySelectorAll("#cambiar button")).forEach((b) =>
       b.setAttribute("aria-pressed", String(b.dataset.carta === OPC.actual)));
     aplicarOpcion();
-    if (!callado) conteo.carta(nombreOpcion(OPC.actual));
+    if (!callado && OPC.elegir) conteo.carta(nombreOpcion(OPC.actual));
   }
 
   function aplicarOpcion() {
@@ -808,7 +827,7 @@
     const chips = $("#chips");
     chips.innerHTML = grupos.map((c, i) =>
       `<button class="chip" data-target="${esc(c.id)}" aria-current="${i === 0}">${esc(c.name)}</button>`).join("");
-    $("#nav").hidden = grupos.length < 2 && !OPC.activo;
+    $("#nav").hidden = grupos.length < 2 && !OPC.elegir;
 
     chips.addEventListener("click", (e) => {
       const b = e.target.closest(".chip");
@@ -926,10 +945,13 @@
       // al mediodía tiene que encontrarlo igual, con el cartelito que le dice
       // de cuál es. Sin buscar, cada opción muestra lo suyo.
       const suya = seccionVa(sec, OPC.actual);
-      const secCoincide = buscando && coincide(sec.dataset.busca || "");
+      const buscable = seccionBuscable(sec);
+      const secCoincide = buscando && buscable && coincide(sec.dataset.busca || "");
       let ultimo = null;
       [].slice.call(sec.querySelectorAll(".item")).forEach((it) => {
-        const ok = !buscando || secCoincide || coincide(it.dataset.busca || "");
+        const ok = !buscando
+          ? true
+          : (buscable && (secCoincide || coincide(it.dataset.busca || "")));
         it.hidden = !ok;
         it.classList.remove("ultimo");
         if (ok) { ultimo = it; if (buscando) encontrados++; }
@@ -939,7 +961,7 @@
     });
 
     $("#chips").hidden = buscando;     // filtrando, saltar de sección no tiene sentido
-    $("#cambiar").hidden = buscando || !OPC.activo;
+    $("#cambiar").hidden = buscando || !OPC.elegir;
     $("#qClear").hidden = !buscando;
 
     const info = $("#qInfo");
