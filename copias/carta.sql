@@ -1,6 +1,6 @@
 -- ============================================================
 --  COPIA DE SEGURIDAD DE LA CARTA — Dairus Rosario
---  Generada automáticamente el 25/9/2026, 11:30:47
+--  Generada automáticamente el 26/9/2026, 10:41:18
 --  30 secciones · 176 productos
 --
 --  PARA VOLVER ATRÁS:
@@ -316,10 +316,10 @@ select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.f
   ('Tabla de rebozados', 'rabas, bastones de muzza, nuggets de pollo, milanesa, suprema, alitas de pollo, olivas y pickles, todo sobre un colchón de papas fritas', 70000, 'Comen 4. Pican 5', 4, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
--- 22. Hamburguesas/Lomos
+-- 22. Hamburguesas/Lomitos
 with c as (
   insert into public.categories (id, name, description, sort_order, visible, image_url)
-  values ('da84f5f6-cba4-4bcb-8537-4121d5554c31', 'Hamburguesas/Lomos', '', 22, true, 'https://kkvtsodkmkxxmklsdlru.supabase.co/storage/v1/object/public/carta/seccion-1789098145586.jpg') returning id
+  values ('da84f5f6-cba4-4bcb-8537-4121d5554c31', 'Hamburguesas/Lomitos', '', 22, true, 'https://kkvtsodkmkxxmklsdlru.supabase.co/storage/v1/object/public/carta/seccion-1789098145586.jpg') returning id
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
