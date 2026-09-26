@@ -106,6 +106,63 @@
   }
   .chip[aria-current="true"]{background:var(--accent); border-color:var(--accent); color:var(--accent-ink); font-weight:500}
 
+  /* ---------- dos cartas ---------- */
+  /* La portada aparece sólo cuando el bar tiene dos propuestas. Es una
+     pantalla y no un desplegable a propósito: Secret Garden no es una
+     sección más de Dairus, es otro lugar a otra hora. */
+  #portada{
+    position:fixed; inset:0; z-index:50; overflow-y:auto;
+    background:var(--bg); background:rgba(var(--veil), .88);
+    display:flex; align-items:center; justify-content:center;
+    padding:32px 20px calc(32px + env(safe-area-inset-bottom, 0px));
+  }
+  .portada-caja{width:100%; max-width:560px; text-align:center}
+  .portada-caja img.logo{max-width:112px; max-height:112px; object-fit:contain; margin:0 auto 14px; display:block}
+  .portada-caja h1{font-family:var(--font); font-size:clamp(1.7rem,7vw,2.3rem); margin:0; letter-spacing:.01em}
+  .portada-caja .pregunta{color:var(--ink-soft); font-size:.94rem; margin:10px 0 26px}
+  .opciones{display:grid; gap:14px}
+  @media (min-width:620px){ .opciones{grid-template-columns:1fr 1fr} }
+  .opcion{
+    position:relative; display:block; width:100%; border:1px solid var(--line);
+    border-radius:16px; overflow:hidden; background:var(--line-soft);
+    color:inherit; font:inherit; text-align:left; cursor:pointer; padding:0;
+    min-height:132px;
+  }
+  .opcion:hover,.opcion:focus-visible{border-color:var(--accent); outline:none}
+  .opcion img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.5}
+  .opcion .velo{position:absolute; inset:0; background:linear-gradient(180deg,
+                 rgba(0,0,0,.12), rgba(0,0,0,.62))}
+  .opcion .txt{position:relative; padding:22px 18px; display:flex; flex-direction:column;
+               justify-content:flex-end; min-height:132px}
+  .opcion.con-foto .txt{color:#fff; text-shadow:0 1px 10px rgba(0,0,0,.55)}
+  .opcion .nom{font-family:var(--font); font-size:1.32rem; line-height:1.15}
+  .opcion .baj{font-size:.8rem; letter-spacing:.14em; text-transform:uppercase;
+               opacity:.82; margin-top:5px}
+
+  /* El selector de arriba: chico, para no comerse la pantalla del teléfono */
+  .cambiar{display:flex; gap:6px; padding:0 20px 8px}
+  .cambiar button{
+    flex:1 1 0; border:1px solid var(--line); background:transparent; color:var(--ink-soft);
+    border-radius:999px; padding:7px 10px; font:inherit; font-size:.82rem; cursor:pointer;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .cambiar button[aria-pressed="true"]{
+    border-color:var(--accent); color:var(--ink); font-weight:600;
+    background:transparent; background:color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  /* Buscando se mira en las dos cartas, así que cada resultado dice de cuál es */
+  .de-otra{
+    display:inline-block; font-size:.62rem; letter-spacing:.1em; text-transform:uppercase;
+    border:1px solid var(--line); border-radius:999px; padding:2px 8px; margin-left:8px;
+    color:var(--ink-soft); vertical-align:middle;
+  }
+  .de-otra{display:none}
+  body.buscando .de-otra{display:inline-block}
+  body.portada-abierta{overflow:hidden}
+  /* La carta se esconde detrás de la portada pero sigue ocupando su lugar:
+     así, al elegir, no hay salto ni recarga. */
+  body.portada-abierta .wrap{visibility:hidden}
+
   /* ---------- buscador ---------- */
   .buscar{
     display:flex; align-items:center; gap:9px; margin:0 20px 9px;
@@ -271,6 +328,15 @@
     .item.agotado{opacity:1}
     .item.agotado .item-name::after{content:" (hoy no hay)"; font-size:8pt; color:#555}
     .agotado-tag, .lupa{display:none}
+    /* En papel salen las dos cartas, una atrás de la otra, y cada sección
+       lleva escrito a cuál pertenece. La hoja es para la cocina: conviene
+       que esté todo. */
+    #portada, .cambiar, .de-otra{display:none !important}
+    main section[hidden]{display:block !important}
+    body.dos-cartas .sec-head h2[data-carta]::after{
+      content:" · " attr(data-carta); font-size:8pt; font-weight:400;
+      color:#666; letter-spacing:.04em;
+    }
     /* En papel las fotos de producto no van: gastan tinta y la hoja es
        para la cocina o el mostrador, no para vender. */
     .item-foto{display:none}
@@ -280,6 +346,14 @@
 </head>
 <body>
 <div id="bg"></div>
+<div id="portada" hidden>
+  <div class="portada-caja">
+    <img class="logo" id="portadaLogo" alt="" hidden>
+    <h1 id="portadaNombre">&nbsp;</h1>
+    <p class="pregunta" id="portadaPregunta">¿Qué carta querés ver?</p>
+    <div class="opciones" id="portadaOpciones"></div>
+  </div>
+</div>
 <div class="wrap">
   <header>
     <img id="logo" alt="">
@@ -288,6 +362,7 @@
     <div class="rule"></div>
   </header>
   <nav id="nav" hidden>
+    <div class="cambiar" id="cambiar" hidden></div>
     <div class="buscar">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5l-4-4"/></svg>
       <input id="q" type="search" autocomplete="off" placeholder="Buscar en la carta…" aria-label="Buscar en la carta">
@@ -458,8 +533,154 @@
       fila(waLink(AUTOR.whatsapp), ICONO.chat, AUTOR.whatsapp) + "</div>";
   }
 
+  /* ---------- opciones de la carta ----------
+     Una opción es un nivel por encima de las secciones: el cliente elige una
+     al abrir y se despliegan las secciones de esa opción (Dairus de día,
+     Secret Garden de noche, un Delivery si algún día hace falta). Una sección
+     puede estar en varias, y la que no está tildada en ninguna aparece en
+     todas — así una sección nueva nunca desaparece por un olvido.
+     Con menos de dos opciones, todo esto queda apagado y no se nota. */
+  const OPC = { lista: [], deSeccion: {}, activo: false, actual: null, _mem: null };
+
+  function leerOpciones(data) {
+    OPC.lista = (data.opciones || [])
+      .filter((o) => o && o.visible !== false)
+      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    OPC.deSeccion = {};
+    (data.enlaces || []).forEach((e) => {
+      if (!e || !e.category_id) return;
+      (OPC.deSeccion[e.category_id] = OPC.deSeccion[e.category_id] || []).push(e.opcion_id);
+    });
+    OPC.activo = OPC.lista.length >= 2;
+    if (!OPC.activo) OPC.actual = null;
+  }
+
+  const opcionPorId = (id) => OPC.lista.filter((o) => o.id === id)[0] || null;
+  const nombreOpcion = (id) => { const o = opcionPorId(id); return o ? o.name : ""; };
+
+  // Los nombres de las opciones de una sección, para el cartelito del
+  // buscador y para el papel. Vacío si aparece en todas.
+  function etiquetaDe(secId) {
+    if (!OPC.activo) return "";
+    const suyas = OPC.deSeccion[secId];
+    if (!suyas || !suyas.length || suyas.length === OPC.lista.length) return "";
+    return OPC.lista.filter((o) => suyas.indexOf(o.id) !== -1).map((o) => o.name).join(" · ");
+  }
+
+  function seccionVa(sec, opcId) {
+    if (!OPC.activo) return true;
+    const lista = (sec.dataset.opciones || "").trim();
+    if (!lista) return true;                       // sin tildar: va en todas
+    return lista.split(/\s+/).indexOf(opcId) !== -1;
+  }
+
+  function recordarOpcion(id) {
+    OPC._mem = id;
+    try { sessionStorage.setItem("carta_opcion", id); } catch (e) { /* modo incógnito */ }
+  }
+  function opcionRecordada() {
+    let id = OPC._mem;
+    try { id = sessionStorage.getItem("carta_opcion") || OPC._mem; } catch (e) { /* nada */ }
+    return opcionPorId(id) ? id : null;            // pudo haberse borrado desde el panel
+  }
+
+  function prepararOpciones(grupos, s) {
+    const port = $("#portada"), cambiar = $("#cambiar");
+    if (!OPC.activo) {
+      port.hidden = true; cambiar.hidden = true;
+      document.body.classList.remove("dos-cartas", "portada-abierta");
+      return;
+    }
+    document.body.classList.add("dos-cartas");
+
+    // La tarjeta usa la foto de la opción; si no tiene, la primera foto de
+    // sección de esa opción. Así la portada se ve bien sin configurar nada.
+    const foto = {};
+    OPC.lista.forEach((o) => {
+      const propia = o.image_url;
+      const dentro = grupos.filter((g) => g.image_url && g.opciones.indexOf(o.id) !== -1)[0];
+      foto[o.id] = propia || (dentro ? dentro.image_url : null);
+    });
+
+    const logo = $("#portadaLogo");
+    if (s.logo_url) { logo.src = s.logo_url; logo.hidden = false; } else { logo.hidden = true; }
+    $("#portadaNombre").textContent = s.bar_name || "";
+
+    $("#portadaOpciones").innerHTML = OPC.lista.map((o) =>
+      '<button class="opcion' + (foto[o.id] ? " con-foto" : "") + '" type="button" data-carta="' + esc(o.id) + '">' +
+      (foto[o.id]
+        ? '<img src="' + esc(foto[o.id]) + '" alt="" loading="lazy" decoding="async"><span class="velo"></span>'
+        : "") +
+      '<span class="txt"><span class="nom">' + esc(o.name) + "</span>" +
+      (o.description ? '<span class="baj">' + esc(o.description) + "</span>" : "") +
+      "</span></button>").join("");
+
+    cambiar.innerHTML = OPC.lista.map((o) =>
+      '<button type="button" data-carta="' + esc(o.id) + '">' + esc(o.name) + "</button>").join("");
+
+    if (!prepararOpciones._cableado) {
+      prepararOpciones._cableado = true;
+      const tocar = (e) => {
+        const b = e.target.closest("button[data-carta]");
+        if (b) elegirOpcion(b.dataset.carta);
+      };
+      port.addEventListener("click", tocar);
+      cambiar.addEventListener("click", (e) => {
+        tocar(e);
+        scrollTo({ top: 0, behavior: "smooth" });
+      });
+    }
+
+    // Imprimiendo salen todas las opciones, así que no hay nada que elegir.
+    const guardada = opcionRecordada();
+    if (/[?&]imprimir\b/.test(location.search)) {
+      port.hidden = true; cambiar.hidden = true;
+      document.body.classList.remove("portada-abierta");
+      elegirOpcion(OPC.lista[0].id, true);
+    } else if (guardada) {
+      elegirOpcion(guardada);          // ya eligió en esta visita: no volvemos a preguntar
+    } else {
+      OPC.actual = OPC.lista[0].id;
+      port.hidden = false;
+      document.body.classList.add("portada-abierta");
+      cambiar.hidden = false;
+      aplicarOpcion();
+    }
+  }
+
+  function elegirOpcion(id, callado) {
+    OPC.actual = opcionPorId(id) ? id : (OPC.lista[0] && OPC.lista[0].id) || null;
+    if (!callado) recordarOpcion(OPC.actual);
+    $("#portada").hidden = true;
+    document.body.classList.remove("portada-abierta");
+    $("#cambiar").hidden = false;
+    [].slice.call(document.querySelectorAll("#cambiar button")).forEach((b) =>
+      b.setAttribute("aria-pressed", String(b.dataset.carta === OPC.actual)));
+    aplicarOpcion();
+    if (!callado) conteo.carta(nombreOpcion(OPC.actual));
+  }
+
+  function aplicarOpcion() {
+    filtrar($("#q").value);     // es quien decide qué secciones se ven
+    actualizarChips();
+  }
+
+  // Los atajos de arriba son sólo de la opción que se está mirando.
+  function actualizarChips() {
+    let primero = true;
+    [].slice.call(document.querySelectorAll(".chip")).forEach((ch) => {
+      const sec = document.getElementById(ch.dataset.target);
+      const va = !!sec && seccionVa(sec, OPC.actual);
+      ch.hidden = !va;
+      ch.setAttribute("aria-current", String(va && primero));
+      if (va) primero = false;
+    });
+    medirNav();
+  }
+
   function render(data) {
     applyTheme(data.settings || {});
+    leerOpciones(data);
     const symbol = (data.settings && data.settings.currency_symbol) || "$";
     const cats = (data.categories || []).filter((c) => c.visible !== false)
       .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
@@ -474,13 +695,33 @@
     // no entran acá: no tiene sentido empujar algo que hoy no hay.
     const grupos = withItems.map((c) => ({
       id: "sec-" + c.id, name: c.name, description: c.description,
-      image_url: c.image_url, items: prods.filter((p) => p.category_id === c.id)
+      image_url: c.image_url, secId: c.id,
+      opciones: OPC.deSeccion[c.id] || [],      // vacío = aparece en todas
+      etiqueta: etiquetaDe(c.id),
+      items: prods.filter((p) => p.category_id === c.id)
     }));
-    const destacados = prods.filter((p) => p.featured && !p.sold_out);
-    if (destacados.length) {
+
+    const catValida = {};
+    withItems.forEach((c) => { catValida[c.id] = true; });
+    const destacados = prods.filter((p) => p.featured && !p.sold_out && catValida[p.category_id]);
+    if (destacados.length && !OPC.activo) {
       grupos.unshift({
         id: "sec-destacados", name: "Los más pedidos", description: "",
-        image_url: null, items: destacados, estrella: true
+        image_url: null, items: destacados, estrella: true, opciones: [], etiqueta: ""
+      });
+    } else if (destacados.length) {
+      // Una tanda de destacados por opción: un Negroni no tiene nada que
+      // hacer arriba de todo a la hora del desayuno.
+      OPC.lista.slice().reverse().forEach((o) => {
+        const items = destacados.filter((p) => {
+          const suyas = OPC.deSeccion[p.category_id];
+          return !suyas || !suyas.length || suyas.indexOf(o.id) !== -1;
+        });
+        if (!items.length) return;
+        grupos.unshift({
+          id: "sec-destacados-" + o.id, name: "Los más pedidos", description: "",
+          image_url: null, items: items, estrella: true, opciones: [o.id], etiqueta: o.name
+        });
       });
     }
 
@@ -521,10 +762,16 @@
       const estrella = c.estrella
         ? '<svg class="estrella" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.4-5.8-3-5.8 3 1.1-6.4L2.6 9.4l6.5-.9z"/></svg>'
         : "";
-      return `<section id="${esc(c.id)}" data-busca="${esc(normalizar(c.name + " " + (c.description || "")))}"${c.image_url ? ' class="con-foto"' : ""}>
+      // La etiqueta sólo existe cuando la sección no está en todas las
+      // opciones: sirve para el buscador, que mira en todas, y para el papel,
+      // donde salen todas seguidas.
+      const etiqueta = c.etiqueta || "";
+      const marca = etiqueta ? ' data-carta="' + esc(etiqueta) + '"' : "";
+      const chapita = etiqueta ? '<span class="de-otra">' + esc(etiqueta) + "</span>" : "";
+      return `<section id="${esc(c.id)}" data-opciones="${esc((c.opciones || []).join(" "))}" data-busca="${esc(normalizar(c.name + " " + (c.description || "")))}"${c.image_url ? ' class="con-foto"' : ""}>
           ${foto}
           <div class="sec-head">
-            <h2>${estrella}${esc(c.name)}</h2>
+            <h2${marca}>${estrella}${esc(c.name)}${chapita}</h2>
             ${c.description ? '<p class="sec-desc">' + esc(c.description) + "</p>" : ""}
           </div>${items}
         </section>`;
@@ -533,7 +780,7 @@
     const chips = $("#chips");
     chips.innerHTML = grupos.map((c, i) =>
       `<button class="chip" data-target="${esc(c.id)}" aria-current="${i === 0}">${esc(c.name)}</button>`).join("");
-    $("#nav").hidden = grupos.length < 2;
+    $("#nav").hidden = grupos.length < 2 && !OPC.activo;
 
     chips.addEventListener("click", (e) => {
       const b = e.target.closest(".chip");
@@ -541,6 +788,8 @@
       const el = document.getElementById(b.dataset.target);
       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     });
+
+    prepararOpciones(grupos, data.settings || {});
 
     const foot = $("#footer");
     const s = data.settings || {};
@@ -603,6 +852,13 @@
       this.sumar("seccion", nombre);
     },
 
+    // Cuál de las dos propuestas se mira más. Una sola vez por visita, así
+    // ir y volver con el selector no infla el número.
+    carta(nombre) {
+      if (!nombre || !this.marca("carta:" + nombre)) return;
+      this.sumar("carta", nombre);
+    },
+
     // Se espera a que deje de escribir: si no, "s", "su", "sus", "sush"
     // se guardarían como cuatro búsquedas fallidas distintas.
     busqueda(texto, hubo) {
@@ -635,22 +891,27 @@
     const buscando = palabras.length > 0;
     const coincide = (heno) => palabras.every((w) => heno.indexOf(w) !== -1);
     let encontrados = 0;
+    document.body.classList.toggle("buscando", buscando);
 
     [].slice.call(document.querySelectorAll("main section")).forEach((sec) => {
-      // Si el nombre de la sección coincide, mostramos la sección entera.
+      // Buscando, se mira en TODAS las opciones: alguien que busca "negroni"
+      // al mediodía tiene que encontrarlo igual, con el cartelito que le dice
+      // de cuál es. Sin buscar, cada opción muestra lo suyo.
+      const suya = seccionVa(sec, OPC.actual);
       const secCoincide = buscando && coincide(sec.dataset.busca || "");
       let ultimo = null;
       [].slice.call(sec.querySelectorAll(".item")).forEach((it) => {
         const ok = !buscando || secCoincide || coincide(it.dataset.busca || "");
         it.hidden = !ok;
         it.classList.remove("ultimo");
-        if (ok) { ultimo = it; encontrados++; }
+        if (ok) { ultimo = it; if (buscando) encontrados++; }
       });
       if (ultimo) ultimo.classList.add("ultimo");   // sin rayita colgando al final
-      sec.hidden = buscando && !ultimo;
+      sec.hidden = buscando ? !ultimo : !suya;
     });
 
     $("#chips").hidden = buscando;     // filtrando, saltar de sección no tiene sentido
+    $("#cambiar").hidden = buscando || !OPC.activo;
     $("#qClear").hidden = !buscando;
 
     const info = $("#qInfo");
@@ -762,14 +1023,24 @@
       .catch(() => conteo.arrancar());
 
     try {
-      const [s, c, p] = await Promise.all([
+      const [s, c, p, o, e] = await Promise.all([
         db.from("settings").select("*").eq("id", 1).maybeSingle(),
         db.from("categories").select("*").order("sort_order"),
-        db.from("products").select("*").order("sort_order")
+        db.from("products").select("*").order("sort_order"),
+        db.from("opciones").select("*").order("sort_order"),
+        db.from("categoria_opcion").select("*")
       ]);
       if (s.error || c.error || p.error) throw (s.error || c.error || p.error);
 
-      const data = { settings: s.data || DEMO.settings, categories: c.data || [], products: p.data || [] };
+      // Las opciones son optativas: si todavía no se corrió opciones.sql,
+      // la carta abre igual que siempre en vez de quedarse en blanco.
+      const data = {
+        settings: s.data || DEMO.settings,
+        categories: c.data || [],
+        products: p.data || [],
+        opciones: (o && !o.error && o.data) || [],
+        enlaces: (e && !e.error && e.data) || []
+      };
       writeCache(data);
       render(data);
     } catch (err) {
