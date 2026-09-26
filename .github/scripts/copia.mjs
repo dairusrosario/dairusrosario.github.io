@@ -30,16 +30,26 @@ async function pedir(tabla, consulta) {
   return res.json();
 }
 
+async function pedirBlando(tabla, consulta) {
+  // Las opciones son optativas: si el bar todavía no corrió opciones.sql,
+  // la copia se hace igual en vez de fallar entera.
+  try { return await pedir(tabla, consulta); } catch (e) { return []; }
+}
+
 export async function leerTodo() {
-  const [settings, categories, products] = await Promise.all([
+  const [settings, categories, products, opciones, enlaces] = await Promise.all([
     pedir("settings", "select=*&id=eq.1"),
     pedir("categories", "select=*&order=sort_order"),
-    pedir("products", "select=*&order=sort_order")
+    pedir("products", "select=*&order=sort_order"),
+    pedirBlando("opciones", "select=*&order=sort_order"),
+    pedirBlando("categoria_opcion", "select=*")
   ]);
   return {
     settings: (settings && settings[0]) || {},
     categories: categories || [],
-    products: products || []
+    products: products || [],
+    opciones: opciones || [],
+    enlaces: enlaces || []
   };
 }
 
@@ -70,9 +80,25 @@ export function armarSql(data, cuando) {
   L.push("");
   L.push("begin;");
   L.push("");
+  const opciones = data.opciones || [];
+  const enlaces = data.enlaces || [];
+  // Sólo si el bar usa opciones, para que la copia sirva igual en una base
+  // donde todavía no se corrió opciones.sql.
+  if (opciones.length || enlaces.length) L.push("delete from public.categoria_opcion;");
   L.push("delete from public.products;");
   L.push("delete from public.categories;");
+  if (opciones.length || enlaces.length) L.push("delete from public.opciones;");
   L.push("");
+
+  if (opciones.length) {
+    L.push("-- opciones de la carta (el cliente elige una al abrir)");
+    L.push("insert into public.opciones (id, name, description, image_url, sort_order, visible) values");
+    L.push(opciones.map((o) => "  (" + [
+      txt(o.id), txt(o.name), txt(o.description || ""), txt(o.image_url),
+      Number(o.sort_order) || 0, bool(o.visible)
+    ].join(", ") + ")").join(",\n") + ";");
+    L.push("");
+  }
 
   data.categories.forEach((c, i) => {
     const items = data.products
@@ -117,6 +143,14 @@ export function armarSql(data, cuando) {
     L.push("where id = 1;");
     L.push("");
   }
+
+  if (enlaces.length) {
+    L.push("-- en qué opción aparece cada sección (sin fila = en todas)");
+    L.push("insert into public.categoria_opcion (category_id, opcion_id) values");
+    L.push(enlaces.map((e) => "  (" + txt(e.category_id) + ", " + txt(e.opcion_id) + ")").join(",\n") + ";");
+    L.push("");
+  }
+
   L.push("commit;");
   L.push("");
   return L.join("\n");
@@ -134,6 +168,8 @@ export function armarJson(data) {
     origen: "copia automática diaria",
     bar: data.settings.bar_name || "",
     settings: data.settings,
+    opciones: data.opciones || [],
+    enlaces: data.enlaces || [],
     categories: data.categories,
     products: data.products
   }, null, 2) + "\n";
