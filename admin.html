@@ -1751,7 +1751,9 @@
   /* ---- visible / orden ---- */
   async function toggle(table, id, campo) {
     const col = campo || "visible";
-    const list = table === "categories" ? state.categories : state.products;
+    // Sirve para cualquier tabla del estado: secciones, productos y opciones.
+    // Estaba atada a dos y por eso Ocultar no hacía nada en las opciones.
+    const list = state[table] || [];
     const row = list.find((r) => r.id === id);
     if (!row) return;
     const { error } = await db.from(table).update({ [col]: !row[col] }).eq("id", id);
