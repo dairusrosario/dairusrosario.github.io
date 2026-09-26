@@ -146,8 +146,9 @@ export function armarSql(data, cuando) {
 
   if (enlaces.length) {
     L.push("-- en qué opción aparece cada sección (sin fila = en todas)");
-    L.push("insert into public.categoria_opcion (category_id, opcion_id) values");
-    L.push(enlaces.map((e) => "  (" + txt(e.category_id) + ", " + txt(e.opcion_id) + ")").join(",\n") + ";");
+    L.push("insert into public.categoria_opcion (category_id, opcion_id, sort_order) values");
+    L.push(enlaces.map((e) => "  (" + txt(e.category_id) + ", " + txt(e.opcion_id) +
+      ", " + (Number(e.sort_order) || 0) + ")").join(",\n") + ";");
     L.push("");
   }
 
