@@ -265,6 +265,12 @@
   .catfoto{display:flex; align-items:center; gap:10px; margin-top:14px; flex-wrap:wrap}
   .catfoto img{width:74px; height:48px; object-fit:cover; border-radius:7px; border:1px solid var(--line)}
   .catfoto .sinfoto{color:var(--soft); font-size:.82rem}
+  /* miniatura de la opción: la misma proporción que el recuadro de la portada */
+  .opc-foto{width:72px; height:30px; object-fit:cover; border-radius:6px; flex:0 0 auto;
+            border:1px solid var(--line)}
+  .opc-sinfoto{width:72px; height:30px; border-radius:6px; flex:0 0 auto;
+               border:1px dashed var(--line); display:grid; place-items:center;
+               font-size:.58rem; color:var(--soft); text-transform:uppercase; letter-spacing:.06em}
   /* Vista previa del logo tal como se ve en la carta: recortado en círculo */
   .thumb.round{width:120px; height:120px; border-radius:50%; background:#2a2724; margin:10px auto 0}
   .swatches{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px}
@@ -366,6 +372,8 @@
         la carta y se despliegan las secciones de esa opción. Sirve cuando el mismo local tiene dos
         propuestas — de día una cosa y de noche otra. <b>Con una sola opción, o sin ninguna, la carta
         funciona como siempre</b> y el cliente no elige nada. El QR no cambia: es la misma dirección.</p>
+      <p class="hint">La foto es la del recuadro que ve el cliente al elegir. Si no le ponés ninguna,
+        toma prestada la de la primera sección de esa opción.</p>
       <div id="opciones"></div>
       <div class="pie-seccion">
         <button class="btn sm" id="addOpcion">+ Nueva opción</button>
@@ -702,6 +710,7 @@
   </div>
 </dialog>
 
+<input type="file" id="opcImgInput" accept="image/*" hidden>
 <input type="file" id="catImgInput" accept="image/*" hidden>
 <input type="file" id="prodImgInput" accept="image/*" hidden>
 
@@ -1039,6 +1048,8 @@
     const id = b.dataset.id;
     const acts = {
       oedit: () => opcDialog((state.opciones || []).find((o) => o.id === id)),
+      ofoto: () => { opcFotoPendiente = id; $("#opcImgInput").click(); },
+      ofotodel: () => quitarFotoOpc(id),
       odel: () => delOpcion(id),
       otoggle: () => toggle("opciones", id),
       oup: () => move("opciones", state.opciones, id, -1),
@@ -1290,6 +1301,44 @@
       });
   });
 
+  /* ---- foto de la opción ----
+     Misma proporción que la foto de sección (2.4) a propósito: en la portada
+     puede convivir una foto subida acá con otra prestada de una sección, y
+     tienen que verse iguales. */
+  let opcFotoPendiente = null;
+
+  $("#opcImgInput").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    const id = opcFotoPendiente;
+    e.target.value = "";
+    opcFotoPendiente = null;
+    if (!file || !id) return;
+    recortar(file,
+      { aspecto: 2.4, anchoMax: 1200, titulo: "Encuadrar la foto de la opción",
+        ayuda: "Es la que se ve en el recuadro que elige el cliente al abrir la carta. El nombre va escrito encima, abajo a la izquierda." },
+      async (blob) => {
+        toast("Subiendo foto…");
+        const anterior = ((state.opciones || []).find((o) => o.id === id) || {}).image_url;
+        try {
+          const url = await upload(blob, "opcion");
+          const { error } = await db.from("opciones").update({ image_url: url }).eq("id", id);
+          if (error) throw error;
+          await borrarArchivo(anterior);
+          toast("Foto lista · " + Math.round(blob.size / 1024) + " KB");
+          loadAll();
+        } catch (err) { fail(err); }
+      });
+  });
+
+  async function quitarFotoOpc(id) {
+    const anterior = ((state.opciones || []).find((o) => o.id === id) || {}).image_url;
+    const { error } = await db.from("opciones").update({ image_url: null }).eq("id", id);
+    if (error) return fail(error);
+    await borrarArchivo(anterior);
+    toast("Foto quitada · vuelve a usar la de la primera sección");
+    loadAll();
+  }
+
   async function quitarFotoCat(id) {
     const anterior = (state.categories.find((c) => c.id === id) || {}).image_url;
     const { error } = await db.from("categories").update({ image_url: null }).eq("id", id);
@@ -1367,6 +1416,9 @@
       const cuantas = (state.enlaces || []).filter((e) => e.opcion_id === o.id).length;
       const sueltas = (state.categories || []).filter((c) => !opcionesDe(c.id).length).length;
       return '<div class="precio-fila' + (o.visible ? "" : " muted") + '">' +
+        (o.image_url
+          ? '<img class="opc-foto" src="' + esc(o.image_url) + '" alt="">'
+          : '<span class="opc-sinfoto">sin foto</span>') +
         '<div class="pf-nombre"><b>' + esc(o.name) + "</b>" +
         (o.visible ? "" : ' <span class="badge">oculta</span>') +
         "<small>" + (o.description ? esc(o.description) + " · " : "") +
@@ -1374,6 +1426,9 @@
         (sueltas ? " + " + sueltas + " en todas" : "") + "</small></div>" +
         '<div class="acts">' +
         '<button class="btn sm" data-act="oedit" data-id="' + o.id + '">Editar</button>' +
+        '<button class="btn sm" data-act="ofoto" data-id="' + o.id + '">' +
+          (o.image_url ? "Cambiar foto" : "Foto") + "</button>" +
+        (o.image_url ? '<button class="btn sm danger" data-act="ofotodel" data-id="' + o.id + '">Quitar</button>' : "") +
         '<button class="btn sm icon" data-act="oup" data-id="' + o.id + '"' + (i === 0 ? " disabled" : "") + ' title="Subir">↑</button>' +
         '<button class="btn sm icon" data-act="odown" data-id="' + o.id + '"' + (i === lista.length - 1 ? " disabled" : "") + ' title="Bajar">↓</button>' +
         '<button class="btn sm" data-act="otoggle" data-id="' + o.id + '">' + (o.visible ? "Ocultar" : "Mostrar") + "</button>" +
@@ -1422,6 +1477,7 @@
       "No se borra ninguna sección ni ningún producto.")) return;
     const res = await db.from("opciones").delete().eq("id", id);
     if (res.error) return fail(res.error);
+    await borrarArchivo(o.image_url);
     toast("Opción borrada");
     loadAll();
   }
