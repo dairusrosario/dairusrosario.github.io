@@ -359,6 +359,19 @@
       <button class="btn sm" id="qAdminClear" type="button" hidden>Limpiar</button>
     </div>
     <p class="hint" id="qAdminInfo" style="margin:0 0 12px" hidden></p>
+
+    <div class="card" id="cardOpciones">
+      <h2>Opciones</h2>
+      <p class="hint">Una opción es un nivel por encima de las secciones: el cliente elige una al abrir
+        la carta y se despliegan las secciones de esa opción. Sirve cuando el mismo local tiene dos
+        propuestas — de día una cosa y de noche otra. <b>Con una sola opción, o sin ninguna, la carta
+        funciona como siempre</b> y el cliente no elige nada. El QR no cambia: es la misma dirección.</p>
+      <div id="opciones"></div>
+      <div class="pie-seccion">
+        <button class="btn sm" id="addOpcion">+ Nueva opción</button>
+      </div>
+    </div>
+
     <div class="pie-seccion" style="margin:0 0 4px">
       <button class="btn primary" id="addCat">+ Nueva sección</button>
       <button class="btn sm" id="reponerTodo" hidden></button>
@@ -378,6 +391,7 @@
       <label for="f_tagline">Bajada (opcional)</label>
       <input type="text" id="f_tagline" maxlength="80" placeholder="Cocina de barra · Coctelería">
     </div>
+
 
     <div class="card">
       <h2>Contacto</h2>
@@ -502,6 +516,12 @@
       <div id="origenes"></div>
     </div>
 
+    <div class="card" id="cardCartas" hidden>
+      <h2>Qué opción eligen</h2>
+      <p class="hint">Cuál opción abre la gente cuando escanea el QR. Se cuenta una sola vez por visita, aunque después cambien.</p>
+      <div id="topCartas"></div>
+    </div>
+
     <div class="card">
       <h2>Secciones más miradas</h2>
       <p class="hint">Una sección cuenta una sola vez por visita, así el que baja hasta el final no infla todo.</p>
@@ -523,6 +543,23 @@
 </div>
 
 <!-- ============ MODALES ============ -->
+<dialog id="opcDlg">
+  <form method="dialog">
+    <div class="dlg-body">
+      <h2 id="opcDlgTitle">Opción</h2>
+      <p class="hint" style="margin-top:0">El nombre es lo que ve el cliente en la tarjeta al abrir la carta.</p>
+      <label for="o_name">Nombre</label>
+      <input type="text" id="o_name" maxlength="40" placeholder="Secret Garden" required>
+      <label for="o_desc">Debajo del nombre (opcional)</label>
+      <input type="text" id="o_desc" maxlength="30" placeholder="Noche">
+    </div>
+    <div class="dlg-foot">
+      <button class="btn" value="cancel">Cancelar</button>
+      <button class="btn primary" value="ok" id="opcSave">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="catDlg">
   <form method="dialog">
     <div class="dlg-body">
@@ -531,6 +568,12 @@
       <input type="text" id="c_name" maxlength="60" placeholder="Tragos de autor" required>
       <label for="c_desc">Descripción (opcional)</label>
       <input type="text" id="c_desc" maxlength="120" placeholder="Preparados al momento">
+      <div id="c_opcRow" hidden>
+        <label>¿En qué opciones aparece?</label>
+        <div id="c_opciones"></div>
+        <p class="hint" style="margin:8px 0 0">Si no tildás ninguna, la sección aparece en todas.
+          Es lo que conviene para las bebidas: se cargan una sola vez.</p>
+      </div>
       <div id="c_posRow" hidden>
         <label for="c_pos">Dónde va en la carta</label>
         <select id="c_pos"></select>
@@ -699,7 +742,7 @@
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   let db = null;
-  let state = { settings: {}, categories: [], products: [] };
+  let state = { settings: {}, categories: [], products: [], opciones: [], enlaces: [] };
 
   function toast(msg, isErr) {
     const t = $("#toast");
@@ -794,14 +837,23 @@
   }
 
   async function pedirDatos() {
-    const [s, c, p] = await Promise.all([
+    const [s, c, p, o, e] = await Promise.all([
       db.from("settings").select("*").eq("id", 1).maybeSingle(),
       db.from("categories").select("*").order("sort_order"),
-      db.from("products").select("*").order("sort_order")
+      db.from("products").select("*").order("sort_order"),
+      db.from("opciones").select("*").order("sort_order"),
+      db.from("categoria_opcion").select("*")
     ]);
     const err = s.error || c.error || p.error;
     if (err) throw err;
-    return { settings: s.data || {}, categories: c.data || [], products: p.data || [] };
+    // Las opciones son optativas: si todavía no se corrió opciones.sql,
+    // el panel abre igual y el bloque de Opciones avisa qué falta.
+    return {
+      settings: s.data || {}, categories: c.data || [], products: p.data || [],
+      opciones: (o && !o.error && o.data) || [],
+      enlaces: (e && !e.error && e.data) || [],
+      sinOpciones: !!(o && o.error)
+    };
   }
 
   // Al abrir el panel después de un rato, el permiso guardado en el navegador
@@ -842,6 +894,7 @@
 
     state = datos;
     ocultarEstado();
+    pintarOpciones();
     renderMenu();
     fillDesign();
   }
@@ -866,7 +919,7 @@
       const items = state.products.filter((p) => p.category_id === c.id);
       return `<div class="card${c.visible ? "" : " muted"}" data-busca="${esc(normalizar(c.name + " " + (c.description || "")))}">
         <div class="cat-head">
-          <span class="name">${esc(c.name)} ${c.visible ? "" : '<span class="badge">oculta</span>'}</span>
+          <span class="name">${esc(c.name)} ${c.visible ? "" : '<span class="badge">oculta</span>'}${etiquetaCarta(c)}</span>
           <div class="acts">
             <button class="btn sm" data-act="cedit" data-id="${c.id}">Editar</button>
             <button class="btn sm icon" data-act="cup" data-id="${c.id}" ${i === 0 ? "disabled" : ""} title="Subir">↑</button>
@@ -977,6 +1030,21 @@
     campo.value = "";
     filtrarPanel();
     campo.focus();
+  });
+
+  $("#addOpcion").addEventListener("click", () => opcDialog(null));
+  $("#opciones").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-act]");
+    if (!b) return;
+    const id = b.dataset.id;
+    const acts = {
+      oedit: () => opcDialog((state.opciones || []).find((o) => o.id === id)),
+      odel: () => delOpcion(id),
+      otoggle: () => toggle("opciones", id),
+      oup: () => move("opciones", state.opciones, id, -1),
+      odown: () => move("opciones", state.opciones, id, 1)
+    };
+    if (acts[b.dataset.act]) acts[b.dataset.act]();
   });
 
   $("#cats").addEventListener("click", (e) => {
@@ -1258,11 +1326,140 @@
     return otras;
   }
 
+  /* ================= opciones ================= */
+  // Una opción es un nivel por encima de las secciones. Con menos de dos,
+  // el panel se comporta igual que siempre y el cliente no elige nada.
+
+  const hayOpciones = () => (state.opciones || []).length >= 2;
+
+  function opcionesDe(catId) {
+    return (state.enlaces || []).filter((e) => e.category_id === catId).map((e) => e.opcion_id);
+  }
+
+  function etiquetaCarta(c) {
+    if (!hayOpciones()) return "";
+    const suyas = opcionesDe(c.id);
+    if (!suyas.length || suyas.length === state.opciones.length) {
+      return ' <span class="badge">en todas</span>';
+    }
+    return state.opciones
+      .filter((o) => suyas.indexOf(o.id) !== -1)
+      .map((o) => ' <span class="badge">' + esc(o.name) + "</span>").join("");
+  }
+
+  function pintarOpciones() {
+    const box = $("#opciones");
+    if (!box) return;
+    if (state.sinOpciones) {
+      box.innerHTML = '<p class="hint" style="margin:0">Todavía no está creada la tabla de opciones. ' +
+        "Corré <b>opciones.sql</b> en Supabase y volvé a entrar.</p>";
+      $("#addOpcion").hidden = true;
+      return;
+    }
+    $("#addOpcion").hidden = false;
+    const lista = state.opciones || [];
+    if (!lista.length) {
+      box.innerHTML = '<p class="hint" style="margin:0">No hay ninguna opción: la carta se ve entera, ' +
+        "como siempre. Creá dos o más para que el cliente elija al abrirla.</p>";
+      return;
+    }
+    box.innerHTML = lista.map((o, i) => {
+      const cuantas = (state.enlaces || []).filter((e) => e.opcion_id === o.id).length;
+      const sueltas = (state.categories || []).filter((c) => !opcionesDe(c.id).length).length;
+      return '<div class="precio-fila' + (o.visible ? "" : " muted") + '">' +
+        '<div class="pf-nombre"><b>' + esc(o.name) + "</b>" +
+        (o.visible ? "" : ' <span class="badge">oculta</span>') +
+        "<small>" + (o.description ? esc(o.description) + " · " : "") +
+        cuantas + (cuantas === 1 ? " sección propia" : " secciones propias") +
+        (sueltas ? " + " + sueltas + " en todas" : "") + "</small></div>" +
+        '<div class="acts">' +
+        '<button class="btn sm" data-act="oedit" data-id="' + o.id + '">Editar</button>' +
+        '<button class="btn sm icon" data-act="oup" data-id="' + o.id + '"' + (i === 0 ? " disabled" : "") + ' title="Subir">↑</button>' +
+        '<button class="btn sm icon" data-act="odown" data-id="' + o.id + '"' + (i === lista.length - 1 ? " disabled" : "") + ' title="Bajar">↓</button>' +
+        '<button class="btn sm" data-act="otoggle" data-id="' + o.id + '">' + (o.visible ? "Ocultar" : "Mostrar") + "</button>" +
+        '<button class="btn sm danger icon aparte" data-act="odel" data-id="' + o.id + '" title="Borrar">✕</button>' +
+        "</div></div>";
+    }).join("");
+    if (lista.length === 1) {
+      box.innerHTML += '<p class="hint" style="margin:10px 0 0">Con una sola opción la carta se ve entera ' +
+        "y el cliente no elige nada. Hace falta una segunda para que aparezca la pantalla de elección.</p>";
+    }
+  }
+
+  function opcDialog(opc) {
+    const dlg = $("#opcDlg");
+    $("#opcDlgTitle").textContent = opc ? "Editar opción" : "Nueva opción";
+    $("#o_name").value = opc ? opc.name : "";
+    $("#o_desc").value = opc ? opc.description || "" : "";
+    dlg.returnValue = "";
+    dlg.showModal();
+
+    dlg.onclose = async () => {
+      if (dlg.returnValue !== "ok") return;
+      const name = $("#o_name").value.trim();
+      if (!name) return;
+      const body = { name: name, description: $("#o_desc").value.trim() };
+      let res;
+      if (opc) {
+        res = await db.from("opciones").update(body).eq("id", opc.id);
+      } else {
+        body.visible = true;
+        body.sort_order = (state.opciones || []).length + 1;
+        res = await db.from("opciones").insert(body);
+      }
+      if (res.error) return fail(res.error);
+      toast(opc ? "Opción actualizada" : "Opción creada");
+      loadAll();
+    };
+  }
+
+  async function delOpcion(id) {
+    const o = (state.opciones || []).find((x) => x.id === id);
+    if (!o) return;
+    const n = (state.enlaces || []).filter((e) => e.opcion_id === id).length;
+    if (!confirm("¿Borrar la opción “" + o.name + "”?\n\n" +
+      (n ? "Las " + n + " secciones que estaban sólo en ella pasan a verse en todas. " : "") +
+      "No se borra ninguna sección ni ningún producto.")) return;
+    const res = await db.from("opciones").delete().eq("id", id);
+    if (res.error) return fail(res.error);
+    toast("Opción borrada");
+    loadAll();
+  }
+
+  // Guardar en qué opciones va una sección: se borra lo que había y se
+  // escribe lo tildado. Son dos o tres filas, no vale la pena afinarlo.
+  async function guardarOpcionesDeSeccion(catId, elegidas) {
+    const antes = opcionesDe(catId).slice().sort().join(",");
+    const ahora = elegidas.slice().sort().join(",");
+    if (antes === ahora) return null;
+    let r = await db.from("categoria_opcion").delete().eq("category_id", catId);
+    if (r.error) return r.error;
+    if (elegidas.length) {
+      r = await db.from("categoria_opcion")
+        .insert(elegidas.map((o) => ({ category_id: catId, opcion_id: o })));
+      if (r.error) return r.error;
+    }
+    return null;
+  }
+
   function catDialog(cat) {
     const dlg = $("#catDlg");
     $("#catDlgTitle").textContent = cat ? "Editar sección" : "Nueva sección";
     $("#c_name").value = cat ? cat.name : "";
     $("#c_desc").value = cat ? cat.description || "" : "";
+
+    const filaOpc = $("#c_opcRow");
+    filaOpc.hidden = !hayOpciones();
+    if (hayOpciones()) {
+      const suyas = cat ? opcionesDe(cat.id) : [];
+      $("#c_opciones").innerHTML = state.opciones.map((o) =>
+        '<div class="check"><input type="checkbox" id="c_opc_' + o.id + '" value="' + o.id + '"' +
+        (suyas.indexOf(o.id) !== -1 ? " checked" : "") + '>' +
+        '<label for="c_opc_' + o.id + '" style="margin:0">' + esc(o.name) +
+        (o.description ? ' <span class="badge">' + esc(o.description) + "</span>" : "") +
+        "</label></div>").join("");
+    }
+
     const otras = llenarPosiciones(cat);
     dlg.returnValue = "";
     dlg.showModal();
@@ -1273,6 +1470,9 @@
       if (!name) return;
 
       const body = { name, description: $("#c_desc").value.trim() };
+      const elegidas = hayOpciones()
+        ? [].slice.call(document.querySelectorAll("#c_opciones input:checked")).map((i) => i.value)
+        : null;
       const destino = $("#c_posRow").hidden
         ? otras.length
         : Math.max(0, Math.min(otras.length, Number($("#c_pos").value) || 0));
@@ -1288,6 +1488,11 @@
         const res = await db.from("categories").insert(body).select().maybeSingle();
         if (res.error) return fail(res.error);
         fila = res.data;
+      }
+
+      if (elegidas && fila) {
+        const err = await guardarOpcionesDeSeccion(fila.id, elegidas);
+        if (err) return fail(err);
       }
 
       toast(cat ? "Sección actualizada" : "Sección creada");
@@ -1695,13 +1900,19 @@
   }
 
   async function leerTodo() {
-    const [s, c, p] = await Promise.all([
+    const [s, c, p, o, e] = await Promise.all([
       db.from("settings").select("*").eq("id", 1).maybeSingle(),
       db.from("categories").select("*").order("sort_order"),
-      db.from("products").select("*").order("sort_order")
+      db.from("products").select("*").order("sort_order"),
+      db.from("opciones").select("*").order("sort_order"),
+      db.from("categoria_opcion").select("*")
     ]);
     if (s.error || c.error || p.error) throw (s.error || c.error || p.error);
-    return { settings: s.data || {}, categories: c.data || [], products: p.data || [] };
+    return {
+      settings: s.data || {}, categories: c.data || [], products: p.data || [],
+      opciones: (o && !o.error && o.data) || [],
+      enlaces: (e && !e.error && e.data) || []
+    };
   }
 
   /* ---- el .sql de respaldo ---- */
@@ -1727,9 +1938,25 @@
     L.push("");
     L.push("begin;");
     L.push("");
+    const opciones = data.opciones || [];
+    const enlaces = data.enlaces || [];
+    // Las dos líneas de opciones sólo salen si el bar las usa: así esta copia
+    // sigue sirviendo en una base donde todavía no se corrió opciones.sql.
+    if (opciones.length || enlaces.length) L.push("delete from public.categoria_opcion;");
     L.push("delete from public.products;");
     L.push("delete from public.categories;");
+    if (opciones.length || enlaces.length) L.push("delete from public.opciones;");
     L.push("");
+
+    if (opciones.length) {
+      L.push("-- opciones de la carta (el cliente elige una al abrir)");
+      L.push("insert into public.opciones (id, name, description, image_url, sort_order, visible) values");
+      L.push(opciones.map((o) => "  (" + [
+        sqlTxt(o.id), sqlTxt(o.name), sqlTxt(o.description || ""), sqlTxt(o.image_url),
+        Number(o.sort_order) || 0, sqlBool(o.visible)
+      ].join(", ") + ")").join(",\n") + ";");
+      L.push("");
+    }
 
     data.categories.forEach((c, i) => {
       const items = data.products
@@ -1774,6 +2001,15 @@
       L.push("where id = 1;");
       L.push("");
     }
+
+    if (enlaces.length) {
+      L.push("-- en qué opción aparece cada sección (sin fila = en todas)");
+      L.push("insert into public.categoria_opcion (category_id, opcion_id) values");
+      L.push(enlaces.map((e) => "  (" + sqlTxt(e.category_id) + ", " + sqlTxt(e.opcion_id) + ")")
+        .join(",\n") + ";");
+      L.push("");
+    }
+
     L.push("commit;");
     L.push("");
     return L.join("\n");
@@ -1795,6 +2031,8 @@
         generado: new Date().toISOString(),
         bar: data.settings.bar_name || "",
         settings: data.settings,
+        opciones: data.opciones || [],
+        enlaces: data.enlaces || [],
         categories: data.categories,
         products: data.products
       }, null, 2), "application/json");
@@ -1863,6 +2101,17 @@
       r = await db.from("categories").delete().not("id", "is", null);
       if (r.error) throw r.error;
 
+      // Una copia vieja no trae opciones: en ese caso no se tocan, para no
+      // borrarlas por restaurar un archivo de antes de que existieran.
+      if (Array.isArray(d.opciones)) {
+        r = await db.from("opciones").delete().not("id", "is", null);
+        if (r.error) throw r.error;
+        if (d.opciones.length) {
+          r = await db.from("opciones").insert(d.opciones.map(limpiar));
+          if (r.error) throw r.error;
+        }
+      }
+
       if (d.categories.length) {
         r = await db.from("categories").insert(d.categories.map(limpiar));
         if (r.error) throw r.error;
@@ -1871,6 +2120,11 @@
         r = await db.from("products").insert(d.products.map(limpiar));
         if (r.error) throw r.error;
       }
+      if (Array.isArray(d.enlaces) && d.enlaces.length) {
+        r = await db.from("categoria_opcion").insert(d.enlaces.map(limpiar));
+        if (r.error) throw r.error;
+      }
+
       if (d.settings && Object.keys(d.settings).length) {
         const s = limpiar(d.settings);
         delete s.id;
@@ -2548,6 +2802,12 @@
     $("#origenes").innerHTML = listaTop(
       orig.map((o) => ({ k: o.k === "qr" ? "Escanearon el QR" : "Entraron por un enlace", v: o.v })),
       totalOrig);
+
+    const cartas = juntar("carta");
+    $("#cardCartas").hidden = !hayOpciones() && !cartas.length;
+    $("#topCartas").innerHTML = cartas.length
+      ? listaTop(cartas, cartas.reduce((a, b) => a + b.v, 0))
+      : '<p class="hint" style="margin:0">Todavía no hay datos. Aparecen a partir de la primera visita con las dos cartas publicadas.</p>';
 
     $("#topSecciones").innerHTML = listaTop(juntar("seccion").slice(0, 12), 0);
     $("#topBusquedas").innerHTML = listaTop(juntar("busca_sin").slice(0, 12), 0);
