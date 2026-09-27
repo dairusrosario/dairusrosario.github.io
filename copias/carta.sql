@@ -1,7 +1,7 @@
 -- ============================================================
 --  COPIA DE SEGURIDAD DE LA CARTA — Dairus Rosario
---  Generada automáticamente el 26/9/2026, 10:41:18
---  30 secciones · 176 productos
+--  Generada automáticamente el 27/9/2026, 11:37:37
+--  30 secciones · 177 productos
 --
 --  PARA VOLVER ATRÁS:
 --  Supabase → SQL Editor → New query → pegar todo → Run.
@@ -10,8 +10,15 @@
 
 begin;
 
+delete from public.categoria_opcion;
 delete from public.products;
 delete from public.categories;
+delete from public.opciones;
+
+-- opciones de la carta (el cliente elige una al abrir)
+insert into public.opciones (id, name, description, image_url, sort_order, visible) values
+  ('acb016e5-3f84-428f-ac42-b11ba407784d', 'Dairus', 'Día', 'https://kkvtsodkmkxxmklsdlru.supabase.co/storage/v1/object/public/carta/opcion-1790449707896.jpg', 1, true),
+  ('6da8601a-aea1-4350-8fd0-fd59fa55cfd3', 'Secret Garden', 'Noche', 'https://kkvtsodkmkxxmklsdlru.supabase.co/storage/v1/object/public/carta/opcion-1790448792230.jpg', 2, true);
 
 -- 1. Desayunos
 with c as (
@@ -20,13 +27,13 @@ with c as (
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
-  ('Clásico', 'Infusión con 2 medias lunas / facturas', 4500::numeric, '', 1, true, false, false, null::text),
-  ('Tostadas', 'Infusión con 2 tostadas con mermelada y queso crema / dulce de leche / manteca', 6000, '', 2, true, false, false, null),
+  ('Clásico', 'Infusión con 2 medias lunas/facturas', 4500::numeric, '', 1, true, false, false, null::text),
+  ('Tostadas', 'Infusión con 2 tostadas con mermelada y queso crema/dulce de leche/manteca', 6000, '', 2, true, false, false, null),
   ('Tostón', 'Infusión con 1 tostón con huevos revueltos, 2 fetas de jamón cocido y 2 de queso, yogurt y granolas', 9500, '', 3, true, false, false, null),
   ('Avocado', 'Infusión con 2 huevos revueltos, palta, tomates cherry y semillas', 9500, '', 4, true, false, false, null),
-  ('Rosarino', 'Infusión con ½ tostado / carlito', 9000, '', 5, true, false, false, null),
+  ('Rosarino', 'Infusión con ½ tostado/carlito', 9000, '', 5, true, false, false, null),
   ('Proteico', 'Infusión con un tostón, 2 huevos revueltos, 2 fetas de panceta a la plancha, 2 fetas de queso, mix frutos secos', 10000, '', 6, true, false, false, null),
-  ('Saludable', 'Yogurt con granolas, frutas, dips de miel, exprimido / licuado', 10000, '', 7, true, false, false, null),
+  ('Saludable', 'Yogurt con granolas, frutas, dips de miel, exprimido/licuado', 10000, '', 7, true, false, false, null),
   ('Campestre', 'Infusión en tazón de 750cc de café filtrado, pan flauta c/manteca y rodajas de salamín, jugo exprimido', 14000, '', 8, true, false, false, null),
   ('Tostón del garden', 'Tostada crujiente base, queso untable sobre un colchón de rúcula, trozos de roquefort y pera con una infusión', 15000, '', 9, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
@@ -72,11 +79,11 @@ with c as (
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
-  ('Iced Americano', 'Doble shot de espresso, agua / hielo', 5500::numeric, '', 1, true, false, false, null::text),
-  ('Iced Caramel Machiatto', 'Shot de espresso, ¼ oz syrup de caramelo, leche / hielo', 5500, '', 2, true, false, false, null),
-  ('Iced Flat White', 'Doble shot de espresso, leche / hielo', 5500, '', 3, true, false, false, null),
-  ('Iced Latte', 'Shot de espresso, leche / hielo', 5500, '', 4, true, false, false, null),
-  ('Iced Pistacho', 'Shot de espresso, ½ oz syrup pistacho, leche / hielo', 5500, '', 5, true, false, false, null)
+  ('Iced Americano', 'Doble shot de espresso, agua/hielo', 5500::numeric, '', 1, true, false, false, null::text),
+  ('Iced Caramel Machiatto', 'Shot de espresso, ¼ oz syrup de caramelo, leche/hielo', 5500, '', 2, true, false, false, null),
+  ('Iced Flat White', 'Doble shot de espresso, leche/hielo', 5500, '', 3, true, false, false, null),
+  ('Iced Latte', 'Shot de espresso, leche/hielo', 5500, '', 4, true, false, false, null),
+  ('Iced Pistacho', 'Shot de espresso, ½ oz syrup pistacho, leche/hielo', 5500, '', 5, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 5. Sándwiches calientes
@@ -87,10 +94,10 @@ with c as (
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
   ('Calentito', 'Pan de campo, manteca, jamón y queso', null::numeric, '', 1, true, false, false, null::text),
-  ('Carlitos/Tostado', '', 9000, '', 2, true, false, false, null),
-  ('Carlitos especial', '', 13000, '', 3, true, false, false, null),
-  ('Carlitos pollo', '', 15000, '', 4, true, false, false, null),
-  ('Dairus', 'Carne vacuna desmechada a las finas hierbas c/cebolla y queso gratinado, en pan de lomo c/semillas', 18000, '', 5, true, false, false, null)
+  ('Carlito/Tostado', '', 9000, '', 2, true, false, false, null),
+  ('Carlito especial', '', 13000, '', 3, true, false, false, null),
+  ('Carlito pollo', '', 15000, '', 4, true, false, false, null),
+  ('Dairus', 'Carne vacuna desmechada a las finas hierbas, con cebolla y queso gratinado, en pan de lomo con semillas', 18000, '', 5, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 6. Sándwiches fríos
@@ -133,7 +140,7 @@ select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.f
   ('Nutella', '', 10000, '', 2, true, false, false, null),
   ('Pastelera', '', 4000, '', 3, true, false, false, null),
   ('Salado c/jamón y queso', '', 6000, '', 4, true, false, false, null),
-  ('Promo: croissant mediterranea', 'Crudo rúcula manteca queso 🧀 🧀 cherry', 8000, '', 5, true, false, false, null),
+  ('Promo: croissant mediterranea', 'Crudo, rúcula, manteca, queso y cherry', 8000, '', 5, true, false, false, null),
   ('Croissant XXL jamón y queso', '', 13000, '', 6, true, false, false, null),
   ('Croissant 1040', 'Croissant XL, dos hamburguesas XL, lechuga, tomate, jamón, queso y dos huevos. Acompañado con papas $15.000', 22000, 'Para compartir', 7, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
@@ -145,9 +152,9 @@ with c as (
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
-  ('Cheescake Rosario', 'Galletitas vainillas chees cake y frutos rojos', null::numeric, '', 1, true, false, false, null::text),
+  ('Cheescake Rosario', 'Galletitas, vainillas, cheescake y frutos rojos', null::numeric, '', 1, true, false, false, null::text),
   ('Chocotorta Rosario', 'Chocolinas y chocotorta', 6000, '', 2, true, false, false, null),
-  ('Oreo Rosario', 'Galletitas oreo dulce de leche y crema oreo', 6000, '', 3, true, false, false, null)
+  ('Oreo Rosario', 'Galletitas oreo, dulce de leche y crema oreo', 6000, '', 3, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 10. Waffles
@@ -163,10 +170,10 @@ select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.f
   ('Helado americana, frutos rojos y salsa de caramelo', '', 7000, '', 4, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
--- 11. Tortas (individuales)
+-- 11. Tortas (Individuales)
 with c as (
   insert into public.categories (id, name, description, sort_order, visible, image_url)
-  values ('53b88b24-25ad-49cd-a65e-b9834884825b', 'Tortas (individuales)', '', 11, true, 'https://kkvtsodkmkxxmklsdlru.supabase.co/storage/v1/object/public/carta/seccion-1789097047265.jpg') returning id
+  values ('53b88b24-25ad-49cd-a65e-b9834884825b', 'Tortas (Individuales)', '', 11, true, 'https://kkvtsodkmkxxmklsdlru.supabase.co/storage/v1/object/public/carta/seccion-1789097047265.jpg') returning id
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
@@ -181,10 +188,10 @@ select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.f
   ('Tres chocolates', '', 8000, '', 9, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
--- 12. Tortas (porciones)
+-- 12. Tortas (Porciones)
 with c as (
   insert into public.categories (id, name, description, sort_order, visible, image_url)
-  values ('90001afc-6cc4-461a-91b0-f181771371cc', 'Tortas (porciones)', '', 12, true, 'https://kkvtsodkmkxxmklsdlru.supabase.co/storage/v1/object/public/carta/seccion-1789097169811.jpg') returning id
+  values ('90001afc-6cc4-461a-91b0-f181771371cc', 'Tortas (Porciones)', '', 12, true, 'https://kkvtsodkmkxxmklsdlru.supabase.co/storage/v1/object/public/carta/seccion-1789097169811.jpg') returning id
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
@@ -290,7 +297,7 @@ select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.f
   ('Alitas de pollo', 'Alitas de pollo rebozadas', 10000::numeric, '', 1, true, false, false, null::text),
   ('Bastones de muzarella', '', 20000, '', 2, true, false, false, null),
   ('Rabas', '', 25000, '', 3, true, false, false, null),
-  ('Rebozados', '4 Bastones de muzzarella papas tiras de rebozados de carne y pollo y 2 empanadas y 2 vasos de vermut', 50000, 'Para 2 personas', 4, true, false, false, null)
+  ('Rebozados', '4 Bastones de muzzarella, papas, tiras de rebozados de carne y pollo, 2 empanadas y 2 vasos de vermut', 50000, 'Para 2 personas', 4, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 20. Menú infantil
@@ -313,7 +320,7 @@ select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.f
   ('Picada', 'Tortilla de papas, salamin, queso en cubos y olivas', 25000::numeric, 'Para 2 personas', 1, true, false, false, null::text),
   ('Picada fiambre', 'Tres tipos de queso, jamón cocido, jamón crudo, mortadela, salamín, olivas verdes y negras.', 50000, '', 2, true, false, false, null),
   ('Tabla de mar', 'Rabas, cornalitos, 3 langostinos, dos brochet de camarones con panceta y papas fritas', 60000, 'Para 3 personas', 3, true, false, false, null),
-  ('Tabla de rebozados', 'rabas, bastones de muzza, nuggets de pollo, milanesa, suprema, alitas de pollo, olivas y pickles, todo sobre un colchón de papas fritas', 70000, 'Comen 4. Pican 5', 4, true, false, false, null)
+  ('Tabla de rebozados', 'Rabas, bastones de muzza, nuggets de pollo, milanesa, suprema, alitas de pollo, olivas y pickles. Todo sobre un colchón de papas fritas', 70000, 'Comen 4. Pican 5', 4, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 22. Hamburguesas/Lomitos
@@ -324,8 +331,9 @@ with c as (
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
   ('Hamburguesa especial', 'Hamburguesa, jamón, queso, lechuga, tomate y huevo en pan de papas acompañado con papas', 15000::numeric, '', 1, true, false, false, null::text),
-  ('La estrella de la noche', 'Donas glaseada, hamburguesas Xl, queso chedar en feta,3 tiras bacon  y 8 churros de papas', 20000, 'Opcional 2 hamburguesas', 2, true, false, false, null),
-  ('Lomito del garden', 'Pan de lomo, jamón, queso, lechuga, tomate, huevo y lomo tiernizado acompañado con churros de papas', 23000, '', 3, true, false, false, null)
+  ('La de la casa', 'Cebolla caramelizada, bacon en lonjas y cheddar, con papas de la casa', 20000, 'Opcional 2 hamburguesas', 2, true, false, false, null),
+  ('La estrella de la noche', 'Donas glaseada, hamburguesas Xl, queso cheddar en feta,3 tiras bacon  y 8 churros de papas', 20000, 'Opcional 2 hamburguesas', 3, true, false, false, null),
+  ('Lomito del garden', 'Pan de lomo, jamón, queso, lechuga, tomate, huevo y lomo tiernizado acompañado con churros de papas', 23000, '', 4, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 23. Pizzas
@@ -380,7 +388,7 @@ insert into public.products (category_id, name, description, price, price_note, 
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
   ('Amstel 1 Lt.', '', 9000::numeric, '', 1, true, false, false, null::text),
   ('Heineken 0 330 cc', '', 6500, '', 2, true, false, false, null),
-  ('Heineken 1 Lt.', '', 12000, '', 3, true, false, false, null),
+  ('Heineken 1 Lt.', '', 13000, '', 3, true, false, false, null),
   ('Heineken 330 cc', '', 6500, '', 4, true, false, false, null),
   ('Imperial Especiales 1 Lt.', '', 11000, '', 5, true, false, false, null),
   ('Imperial Golden 1 Lt.', '', 11000, '', 6, true, false, false, null),
@@ -476,7 +484,46 @@ update public.settings set
   instagram = 'dairus.rosario',
   facebook = 'dairus.rosario',
   direccion = 'Rueda 1040, Rosario',
-  mapa_url = 'https://www.google.com/maps/place/Rueda+1040,+S2001+Rosario,+Santa+Fe/@-32.9710023,-60.6434725,17z/data=!3m1!4b1!4m6!3m5!1s0x95b7aba43140ed11:0x716be98d501ce6b5!8m2!3d-32.9710023!4d-60.6434725!16s%2Fg%2F11k4hk0y2v'
+  mapa_url = 'https://www.google.com/maps/place/Rueda+1040,+S2001+Rosario,+Santa+Fe/@-32.9710023,-60.6434725,17z/data=!3m1!4b1!4m6!3m5!1s0x95b7aba43140ed11:0x716be98d501ce6b5!8m2!3d-32.9710023!4d-60.6434725!16s%2Fg%2F11k4hk0y2v',
+  dos_cartas = true,
+  dia_nombre = 'Dairus',
+  dia_bajada = 'Día',
+  noche_nombre = 'Secret Garden',
+  noche_bajada = 'Noche'
 where id = 1;
+
+-- en qué opción aparece cada sección (sin fila = en todas)
+insert into public.categoria_opcion (category_id, opcion_id, sort_order) values
+  ('cf82aa5a-0866-470b-9471-f0ca6bdbd61b', '6da8601a-aea1-4350-8fd0-fd59fa55cfd3', 1),
+  ('4d364f60-c0ab-467e-ba40-0c5358c4b3b9', '6da8601a-aea1-4350-8fd0-fd59fa55cfd3', 2),
+  ('c19a7eff-a68b-4368-9750-4c1554f17883', '6da8601a-aea1-4350-8fd0-fd59fa55cfd3', 3),
+  ('8c15a364-2626-4bac-bdd9-2a514bd6b9b4', '6da8601a-aea1-4350-8fd0-fd59fa55cfd3', 4),
+  ('da84f5f6-cba4-4bcb-8537-4121d5554c31', '6da8601a-aea1-4350-8fd0-fd59fa55cfd3', 5),
+  ('e5424797-d38b-4dd2-880b-216fd5471cb1', '6da8601a-aea1-4350-8fd0-fd59fa55cfd3', 6),
+  ('8a651ff6-4dae-434f-9595-5c567828af7e', '6da8601a-aea1-4350-8fd0-fd59fa55cfd3', 7),
+  ('fd8b5e28-1024-4e34-be6e-c50b4e7a0e15', '6da8601a-aea1-4350-8fd0-fd59fa55cfd3', 8),
+  ('2dc4e497-6de8-4a6a-b3e7-c4d724e66fd7', '6da8601a-aea1-4350-8fd0-fd59fa55cfd3', 9),
+  ('5b440d24-1c5c-42d3-bde5-b9114573d05d', '6da8601a-aea1-4350-8fd0-fd59fa55cfd3', 10),
+  ('6636147b-6d19-4bdc-ab54-730f983f3097', '6da8601a-aea1-4350-8fd0-fd59fa55cfd3', 11),
+  ('58a7fd69-3ea1-4f70-8630-494481d02902', '6da8601a-aea1-4350-8fd0-fd59fa55cfd3', 12),
+  ('080b2727-2c7f-407c-afeb-923ae8c745bf', '6da8601a-aea1-4350-8fd0-fd59fa55cfd3', 13),
+  ('29d30163-4fe3-4856-b798-fb0e57f9e093', 'acb016e5-3f84-428f-ac42-b11ba407784d', 1),
+  ('c01ec70b-0a5a-4dde-a321-b4912f4a6479', 'acb016e5-3f84-428f-ac42-b11ba407784d', 2),
+  ('06ed7588-d422-4288-be2d-f4c845646ef2', 'acb016e5-3f84-428f-ac42-b11ba407784d', 3),
+  ('186d1490-e55a-4338-a8ab-66620480c11d', 'acb016e5-3f84-428f-ac42-b11ba407784d', 4),
+  ('9fdb560f-0aae-4c4b-926c-651869760fdd', 'acb016e5-3f84-428f-ac42-b11ba407784d', 5),
+  ('05ba652f-29c1-4011-94af-cf9929acde49', 'acb016e5-3f84-428f-ac42-b11ba407784d', 6),
+  ('6328258a-f7dc-4635-9af2-fa4094de1137', 'acb016e5-3f84-428f-ac42-b11ba407784d', 7),
+  ('c05c378a-0482-4589-91c4-681182d9567f', 'acb016e5-3f84-428f-ac42-b11ba407784d', 8),
+  ('46eccbb1-43e0-4bfe-bb37-d8b13dcb758d', 'acb016e5-3f84-428f-ac42-b11ba407784d', 9),
+  ('c0440f1a-41e9-4d47-879f-9956e33d0f17', 'acb016e5-3f84-428f-ac42-b11ba407784d', 10),
+  ('53b88b24-25ad-49cd-a65e-b9834884825b', 'acb016e5-3f84-428f-ac42-b11ba407784d', 11),
+  ('90001afc-6cc4-461a-91b0-f181771371cc', 'acb016e5-3f84-428f-ac42-b11ba407784d', 12),
+  ('142d5a9c-95fc-4d09-9c57-3f0f828dac17', 'acb016e5-3f84-428f-ac42-b11ba407784d', 13),
+  ('aabd9d8f-68d0-46df-8479-67bf8b44ac07', 'acb016e5-3f84-428f-ac42-b11ba407784d', 14),
+  ('526cdf35-e291-4f78-9b4f-bdf2d687b345', 'acb016e5-3f84-428f-ac42-b11ba407784d', 15),
+  ('bbc8e402-33e7-4fc9-b224-ce08f961f65e', 'acb016e5-3f84-428f-ac42-b11ba407784d', 16),
+  ('7ff8d9f1-20ee-4059-9608-70a27f9c813c', 'acb016e5-3f84-428f-ac42-b11ba407784d', 17),
+  ('8a651ff6-4dae-434f-9595-5c567828af7e', 'acb016e5-3f84-428f-ac42-b11ba407784d', 18);
 
 commit;
