@@ -466,6 +466,10 @@
       <p class="hint" style="margin-top:8px">Mientras esté destildado, el botón de reservar no aparece
         en la carta. Las reservas ya anotadas no se borran.</p>
 
+      <label for="r_wa" style="margin-top:18px">WhatsApp que recibe las reservas</label>
+      <input type="text" id="r_wa" maxlength="30" placeholder="Dejalo vacío para usar el del bar">
+      <p class="hint" id="r_waAviso" style="margin:6px 0 0"></p>
+
       <label for="r_texto" style="margin-top:18px">Aclaración que ve el cliente</label>
       <input type="text" id="r_texto" maxlength="140" placeholder="Completá los datos y te confirmamos por WhatsApp.">
 
@@ -3243,6 +3247,8 @@
   function pintarConfigReservas() {
     const s = state.settings;
     $("#r_activas").checked = !!s.reservas_activas;
+    $("#r_wa").value = s.reservas_whatsapp || "";
+    avisoWhatsappReservas();
     $("#r_texto").value = s.reservas_texto || "";
     $("#r_max").value = s.reservas_max == null ? 10 : s.reservas_max;
     $("#r_ant").value = s.reservas_anticipacion == null ? 2 : s.reservas_anticipacion;
@@ -3286,6 +3292,25 @@
           '" style="padding:0 5px; margin-left:4px">✕</button></span>').join("")
       : '<p class="hint" style="margin:0">Ninguna.</p>';
   }
+
+  // Decir a qué número van a llegar, siempre. Es el dato que más caro sale
+  // tener mal: una reserva que le llega a nadie no se entera nadie.
+  function avisoWhatsappReservas() {
+    const propio = ($("#r_wa").value || "").trim();
+    const usado = propio || state.settings.whatsapp || "";
+    const el = $("#r_waAviso");
+    if (!el) return;
+    if (!waDe(usado)) {
+      el.innerHTML = "⚠️ Sin un número válido acá o en <b>Diseño → Contacto</b>, el botón de reservar " +
+        "no aparece en la carta.";
+    } else if (propio) {
+      el.innerHTML = "Las reservas llegan a <b>" + esc(propio) + "</b>. El contacto del bar en el pie de " +
+        "la carta sigue siendo el de Diseño.";
+    } else {
+      el.innerHTML = "Las reservas llegan al contacto del bar: <b>" + esc(usado) + "</b>.";
+    }
+  }
+  $("#r_wa").addEventListener("input", avisoWhatsappReservas);
 
   $("#r_turnos").addEventListener("change", (e) => {
     const fila = e.target.closest(".turno-fila");
@@ -3368,6 +3393,7 @@
     const body = {
       reservas_activas: $("#r_activas").checked,
       reservas_texto: $("#r_texto").value.trim(),
+      reservas_whatsapp: $("#r_wa").value.trim(),
       reservas_max: Math.max(1, Number($("#r_max").value) || 10),
       reservas_anticipacion: Math.max(0, Number($("#r_ant").value) || 0),
       reservas_sectores: leerSectoresDelForm(),
@@ -3381,8 +3407,8 @@
       toast("No se guardó " + turnosRotos.join(" ni ") + ": abre y cierra a la misma hora", true);
     } else if (body.reservas_activas && !Object.keys(turnos).length) {
       toast("Guardado, pero sin ningún día marcado no se puede reservar", true);
-    } else if (body.reservas_activas && !waDe(state.settings.whatsapp)) {
-      toast("Guardado, pero falta cargar el WhatsApp del bar en Diseño", true);
+    } else if (body.reservas_activas && !waDe(body.reservas_whatsapp || state.settings.whatsapp)) {
+      toast("Guardado, pero falta un WhatsApp válido para recibir las reservas", true);
     } else {
       toast("Configuración guardada");
     }
