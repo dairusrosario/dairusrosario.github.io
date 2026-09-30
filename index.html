@@ -176,6 +176,7 @@
   .btn-reservar:hover{background:transparent; background:color-mix(in srgb, var(--accent) 14%, transparent)}
   .portada-caja .btn-reservar{margin-top:20px}
   #footer .btn-reservar{margin:22px auto 0; display:flex; width:fit-content}
+  header .btn-reservar{margin:22px auto 0; display:flex; width:fit-content}
 
   dialog#resDlg{
     border:none; padding:0; width:min(480px, 94vw); border-radius:16px;
@@ -426,6 +427,7 @@
     <h1 id="barName">&nbsp;</h1>
     <p id="tagline"></p>
     <div class="rule"></div>
+    <button class="btn-reservar" id="reservarArriba" type="button" hidden></button>
   </header>
   <nav id="nav" hidden>
     <div class="cambiar" id="cambiar" hidden></div>
@@ -1090,7 +1092,14 @@
       whatsapp: (s && s.whatsapp) || ""
     };
     const hay = RES.cfg.activas && !!waLink(RES.cfg.whatsapp) && diasLibres().length > 0;
-    ["#reservarPortada", "#reservarPie"].forEach((sel) => {
+    // Con ?reservar el formulario se abre solo, sin pasar por la portada.
+    if (hay && pidenReserva() && !leerReservas._abierto) {
+      leerReservas._abierto = true;
+      const port = $("#portada");
+      if (port) { port.hidden = true; document.body.classList.remove("portada-abierta"); }
+      setTimeout(abrirReserva, 60);
+    }
+    ["#reservarPortada", "#reservarPie", "#reservarArriba"].forEach((sel) => {
       const b = $(sel);
       if (!b) return;
       b.hidden = !hay;
@@ -1125,15 +1134,25 @@
     return nombre + " " + d.getDate() + " de " + MESES[d.getMonth()];
   }
 
+  // Un bar cierra a las 00:30 o a la 1: cuando la hora de cierre es menor
+  // que la de apertura, el turno sigue de madrugada. Esos horarios pertenecen
+  // a la misma noche, aunque el reloj ya marque el día siguiente.
   function horasLibres(d, turno, limite) {
     const aMin = (h) => { const p = String(h || "").split(":"); return Number(p[0]) * 60 + Number(p[1] || 0); };
-    const desde = aMin(turno.desde), hasta = aMin(turno.hasta);
+    const desde = aMin(turno.desde), cierre = aMin(turno.hasta);
+    const cruza = cierre < desde;
+    const hasta = cruza ? cierre + 1440 : cierre;
     const paso = Math.max(Number(turno.paso) || 30, 5);
     const salida = [];
     for (let m = desde; m <= hasta; m += paso) {
-      const cuando = new Date(d.getFullYear(), d.getMonth(), d.getDate(), Math.floor(m / 60), m % 60);
+      const real = m % 1440, otroDia = m >= 1440 ? 1 : 0;
+      const cuando = new Date(d.getFullYear(), d.getMonth(), d.getDate() + otroDia,
+                              Math.floor(real / 60), real % 60);
       if (cuando < limite) continue;
-      salida.push(String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"));
+      salida.push({
+        h: String(Math.floor(real / 60)).padStart(2, "0") + ":" + String(real % 60).padStart(2, "0"),
+        madrugada: otroDia === 1
+      });
     }
     return salida;
   }
@@ -1146,7 +1165,7 @@
       ? horasLibres(new Date(elegido.fecha + "T12:00:00"), elegido.turno,
                     new Date(hoyArg().getTime() + cfg.anticipacion * 3600 * 1000))
       : [];
-    if (horas.indexOf(d.hora) === -1) d.hora = horas[0] || "";
+    if (!horas.some((x) => x.h === d.hora)) d.hora = (horas[0] && horas[0].h) || "";
 
     const personas = [];
     for (let i = 1; i <= cfg.max; i++) personas.push(i);
@@ -1168,8 +1187,9 @@
           personas.map((n) => '<option value="' + n + '"' + (Number(d.personas) === n ? " selected" : "") +
             ">" + n + "</option>").join("") + "</select></div>" +
         '<div class="res-campo"><label for="resHora">Hora</label><select id="resHora">' +
-          horas.map((h) => '<option value="' + h + '"' + (d.hora === h ? " selected" : "") +
-            ">" + h + "</option>").join("") + "</select></div>" +
+          horas.map((x) => '<option value="' + x.h + '"' + (d.hora === x.h ? " selected" : "") +
+            ">" + x.h + (x.madrugada ? " · madrugada" : "") + "</option>").join("") +
+          "</select></div>" +
       "</div>" +
 
       '<div class="res-dos">' +
@@ -1271,6 +1291,11 @@
     RES.enviando = false;
   }
 
+  // Un enlace directo para compartir: dairus.github.io/?reservar
+  // Sirve para Instagram, Facebook o un QR aparte, sin que el cliente tenga
+  // que entrar a la carta y bajar hasta el pie.
+  const pidenReserva = () => /[?&#]reservar\b/.test(location.search + location.hash);
+
   function abrirReserva() {
     if (!RES.cfg || !RES.cfg.activas) return;
     RES.datos.sector = RES.datos.sector ||
@@ -1282,7 +1307,7 @@
   }
 
   document.addEventListener("click", (e) => {
-    const abrir = e.target.closest("#reservarPortada, #reservarPie");
+    const abrir = e.target.closest("#reservarPortada, #reservarPie, #reservarArriba");
     if (abrir) { e.preventDefault(); return abrirReserva(); }
     if (e.target.closest("#resCancelar")) return $("#resDlg").close();
     if (e.target.closest("#resEnviar")) return enviarReserva();
