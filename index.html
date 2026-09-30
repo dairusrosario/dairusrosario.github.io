@@ -1089,7 +1089,9 @@
       turnos: lista(s && s.reservas_turnos, {}),
       bloqueadas: lista(s && s.reservas_bloqueadas, []),
       texto: (s && s.reservas_texto) || "",
-      whatsapp: (s && s.whatsapp) || ""
+      // Las reservas pueden ir a un número distinto del contacto general.
+      // Si no se cargó uno propio, van al de siempre.
+      whatsapp: (s && String(s.reservas_whatsapp || "").trim()) || (s && s.whatsapp) || ""
     };
     const hay = RES.cfg.activas && !!waLink(RES.cfg.whatsapp) && diasLibres().length > 0;
     // Con ?reservar el formulario se abre solo, sin pasar por la portada.
