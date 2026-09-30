@@ -487,7 +487,9 @@
 
       <label style="margin-top:22px">Días y horarios</label>
       <p class="hint" style="margin:0 0 6px">El cliente sólo puede elegir entre estos horarios, así casi
-        no hay nada que rechazar. El tope es cuántas reservas se aceptan por horario; 0 es sin límite.</p>
+        no hay nada que rechazar. El tope es cuántas reservas se aceptan por horario; 0 es sin límite.
+        <b>Si cerrás pasada la medianoche, poné la hora de cierre igual</b> — por ejemplo de 20:00 a 01:00 —
+        y esos horarios quedan como parte de la misma noche.</p>
       <div class="turnos" id="r_turnos"></div>
 
       <label for="r_bloq" style="margin-top:22px">Fechas bloqueadas</label>
@@ -591,6 +593,23 @@
         <button class="btn primary" id="dlQr">Descargar PNG</button>
         <button class="btn" id="printQr">Imprimir cartel para la mesa</button>
       </div>
+    </div>
+
+    <div class="card" id="cardEnlaceRes" hidden>
+      <h2>Enlace para reservar</h2>
+      <p class="hint">Este abre la carta con el formulario de reserva ya desplegado, sin que el cliente
+        tenga que buscarlo. Es el que conviene pegar en Instagram, en Facebook o en el estado de WhatsApp.</p>
+      <input type="text" id="resUrl" readonly>
+      <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap">
+        <button class="btn" id="copyResUrl">Copiar enlace</button>
+        <button class="btn" id="makeResQr">Generar QR</button>
+      </div>
+      <div id="resQrBox" hidden></div>
+      <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap" id="resQrActions" hidden>
+        <button class="btn primary" id="dlResQr">Descargar PNG</button>
+      </div>
+      <p class="hint" style="margin-top:14px">Mientras las reservas estén apagadas, este enlace abre la
+        carta normal: no queda un formulario roto dando vueltas.</p>
     </div>
   </div>
 
@@ -969,6 +988,7 @@
     $("#appView").hidden = false;
     // La carta pública vive en la misma carpeta que este panel.
     $("#publicUrl").value = location.origin + location.pathname.replace(/[^/]*$/, "");
+    pintarEnlaceReservas();
     await loadAll(true);
   }
 
@@ -3253,6 +3273,8 @@
         "</select>" +
         '<input type="number" class="r-tope" data-d="' + d + '" min="0" max="99" value="' +
           Number((t && t.tope) || 0) + '" title="Tope por horario (0 = sin límite)">' +
+        '<span class="hint madruga" style="margin:0"' +
+          (t && t.hasta < t.desde ? "" : " hidden") + ">sigue de madrugada</span>" +
         "</div>";
     }).join("");
 
@@ -3266,9 +3288,14 @@
   }
 
   $("#r_turnos").addEventListener("change", (e) => {
+    const fila = e.target.closest(".turno-fila");
+    if (!fila) return;
     if (e.target.classList.contains("r-dia-on")) {
-      const fila = e.target.closest(".turno-fila");
       fila.classList.toggle("off", !e.target.checked);
+    }
+    const marca = fila.querySelector(".madruga");
+    if (marca) {
+      marca.hidden = !(fila.querySelector(".r-hasta").value < fila.querySelector(".r-desde").value);
     }
   });
   $("#r_sectores").addEventListener("click", (e) => {
@@ -3312,14 +3339,19 @@
     })).filter((x) => x.nombre);
   }
 
+  let turnosRotos = [];
+
   function leerTurnosDelForm() {
     const out = {};
+    turnosRotos = [];
     $$("#r_turnos .turno-fila").forEach((fila) => {
       const d = fila.dataset.dia;
       if (!fila.querySelector(".r-dia-on").checked) return;
       const desde = fila.querySelector(".r-desde").value || "20:00";
       const hasta = fila.querySelector(".r-hasta").value || "23:00";
-      if (hasta <= desde) return;          // un turno al revés no se guarda
+      // "20:00 a 01:00" es un turno que sigue de madrugada, no un error.
+      // Lo único imposible es que abra y cierre a la misma hora.
+      if (hasta === desde) { turnosRotos.push(DIAS_SEM[Number(fila.dataset.dia)]); return; }
       out[d] = {
         desde: desde, hasta: hasta,
         paso: Number(fila.querySelector(".r-paso").value) || 30,
@@ -3345,7 +3377,9 @@
     const { error } = await db.from("settings").update(body).eq("id", 1);
     btn.disabled = false;
     if (error) return fail(error);
-    if (body.reservas_activas && !Object.keys(turnos).length) {
+    if (turnosRotos.length) {
+      toast("No se guardó " + turnosRotos.join(" ni ") + ": abre y cierra a la misma hora", true);
+    } else if (body.reservas_activas && !Object.keys(turnos).length) {
       toast("Guardado, pero sin ningún día marcado no se puede reservar", true);
     } else if (body.reservas_activas && !waDe(state.settings.whatsapp)) {
       toast("Guardado, pero falta cargar el WhatsApp del bar en Diseño", true);
@@ -3476,6 +3510,48 @@
     }
     return false;
   }
+
+  // El enlace directo al formulario. Sale de la misma dirección de la carta,
+  // así que no hay nada nuevo que publicar ni ningún archivo aparte.
+  function pintarEnlaceReservas() {
+    const card = $("#cardEnlaceRes");
+    if (!card) return;
+    const base = ($("#publicUrl").value || "").trim();
+    card.hidden = !base;
+    $("#resUrl").value = base ? base + (base.indexOf("?") === -1 ? "?" : "&") + "reservar" : "";
+  }
+
+  $("#copyResUrl").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText($("#resUrl").value);
+      toast("Enlace copiado");
+    } catch (e) {
+      $("#resUrl").select();
+      toast("Copialo con Ctrl+C");
+    }
+  });
+
+  $("#makeResQr").addEventListener("click", async () => {
+    const url = $("#resUrl").value.trim();
+    if (!url) return;
+    if (!(await ensureQr())) {
+      return toast("No se pudo cargar el generador. Copiá el enlace y usá un generador online.", true);
+    }
+    const caja = $("#resQrBox");
+    caja.innerHTML = "";
+    caja.hidden = false;
+    new window.QRCode(caja, { text: url, width: 320, height: 320, correctLevel: window.QRCode.CorrectLevel.M });
+    $("#resQrActions").hidden = false;
+  });
+
+  $("#dlResQr").addEventListener("click", () => {
+    const img = $("#resQrBox").querySelector("img") || $("#resQrBox").querySelector("canvas");
+    if (!img) return;
+    const a = document.createElement("a");
+    a.href = img.src || img.toDataURL("image/png");
+    a.download = "qr-reservas.png";
+    document.body.appendChild(a); a.click(); a.remove();
+  });
 
   $("#makeQr").addEventListener("click", async () => {
     const url = $("#publicUrl").value.trim();
