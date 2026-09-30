@@ -59,18 +59,41 @@
   .cambio a[aria-current="page"]{background:#fff; color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.1)}
 
   .tabs{display:flex; gap:6px; margin:0 -16px; padding:10px 16px 0; overflow-x:auto}
+  .tab .pend{
+    display:inline-grid; place-items:center; min-width:19px; height:19px; padding:0 5px;
+    margin-left:6px; border-radius:999px; background:var(--danger); color:#fff;
+    font-size:.7rem; font-weight:700; line-height:1; vertical-align:1px;
+  }
+  .tab[aria-selected="true"] .pend{background:#fff; color:var(--ink)}
   .tab{border:1px solid var(--line); background:var(--card); color:var(--soft); border-radius:999px;
        padding:8px 14px; font:inherit; font-size:.86rem; font-weight:500; cursor:pointer; white-space:nowrap}
   .tab[aria-selected="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
-  /* En pantallas angostas las cinco solapas tienen que entrar sin scroll:
-     una solapa que no se ve es una solapa que nadie usa. */
+  /* Una solapa que no se ve es una solapa que nadie usa. Con cinco entraban
+     en una fila; con Reservas ya son seis y en un teléfono se cortaba la
+     última. En vez de dejarlas correr de costado —donde nadie las busca—
+     pasan a dos renglones: se ven todas de una. */
+  @media (max-width:560px){
+    .tabs{flex-wrap:wrap; overflow-x:visible; row-gap:6px}
+  }
   @media (max-width:480px){
-    .tabs{gap:5px}
-    .tab{padding:7px 10px; font-size:.8rem}
+    .tabs{gap:5px; row-gap:6px}
+    .tab .pend{
+    display:inline-grid; place-items:center; min-width:19px; height:19px; padding:0 5px;
+    margin-left:6px; border-radius:999px; background:var(--danger); color:#fff;
+    font-size:.7rem; font-weight:700; line-height:1; vertical-align:1px;
+  }
+  .tab[aria-selected="true"] .pend{background:#fff; color:var(--ink)}
+  .tab{padding:7px 10px; font-size:.8rem}
   }
   @media (max-width:384px){
     .tabs{gap:4px}
-    .tab{padding:6px 8px; font-size:.77rem}
+    .tab .pend{
+    display:inline-grid; place-items:center; min-width:19px; height:19px; padding:0 5px;
+    margin-left:6px; border-radius:999px; background:var(--danger); color:#fff;
+    font-size:.7rem; font-weight:700; line-height:1; vertical-align:1px;
+  }
+  .tab[aria-selected="true"] .pend{background:#fff; color:var(--ink)}
+  .tab{padding:6px 8px; font-size:.77rem}
   }
 
   /* botones */
@@ -167,6 +190,30 @@
   .precio-fila input[type=number]{width:108px; flex:0 0 auto; margin:0; text-align:right;
                                   font-variant-numeric:tabular-nums}
   .precio-fila.cambiada input[type=number]{border-color:var(--ink); font-weight:600}
+
+  /* reservas */
+  .res-card{border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-top:12px}
+  .res-card.pend{border-color:#e0c68a; background:#fffaf0}
+  .res-card.rech{opacity:.55}
+  .res-top{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+  .res-top .quien{font-weight:600; font-size:1.02rem}
+  .res-top .cod{font-family:ui-monospace, Menlo, monospace; font-size:.72rem; color:var(--soft);
+                letter-spacing:.1em}
+  .res-cuando{font-size:.92rem; margin-top:3px}
+  .res-meta{color:var(--soft); font-size:.85rem; margin-top:4px}
+  .res-nota{margin-top:8px; font-size:.9rem; background:#faf9f7; border-radius:8px; padding:8px 11px}
+  .res-vacio{color:var(--soft); font-size:.9rem; margin:0}
+  .res-resumen{display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 2px}
+  .res-resumen span{border:1px solid var(--line); border-radius:999px; padding:5px 11px;
+                    font-size:.82rem; color:var(--soft)}
+  .res-resumen b{color:var(--ink); font-variant-numeric:tabular-nums}
+  .turnos{display:flex; flex-direction:column; gap:8px; margin-top:8px}
+  .turno-fila{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .turno-fila .dia{flex:0 0 108px; font-size:.9rem}
+  .turno-fila input[type=time]{width:106px; margin:0}
+  .turno-fila select{width:auto; margin:0}
+  .turno-fila input[type=number]{width:74px; margin:0}
+  .turno-fila.off > *:not(.dia):not(.check){opacity:.4; pointer-events:none}
 
   /* diálogo de importar planilla */
   dialog.ancho{width:min(780px, 96vw)}
@@ -345,6 +392,7 @@
 
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="menu" aria-selected="true">Carta</button>
+    <button class="tab" role="tab" data-tab="reservas" aria-selected="false" id="tabReservas">Reservas</button>
     <button class="tab" role="tab" data-tab="design" aria-selected="false">Diseño</button>
     <button class="tab" role="tab" data-tab="qr" aria-selected="false">QR</button>
     <button class="tab" role="tab" data-tab="stats" aria-selected="false">Estadísticas</button>
@@ -389,6 +437,69 @@
       <button class="btn sm" id="imprimir">Imprimir la carta</button>
     </div>
     <div id="cats"></div>
+  </div>
+
+  <!-- ---- pestaña reservas ---- -->
+  <div id="tab-reservas" hidden>
+    <div class="card">
+      <h2>Reservas</h2>
+      <p class="hint">Lo que el cliente completa en la carta queda anotado acá, aunque no llegue a
+        mandar el mensaje de WhatsApp. <b>Confirmar</b> y <b>Rechazar</b> marcan la reserva y de paso
+        abren WhatsApp con la respuesta escrita: una sola acción, no dos.</p>
+      <div class="res-resumen" id="resResumen"></div>
+      <div class="buscar-admin" style="margin-top:12px">
+        <div class="campo">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5l-4-4"/></svg>
+          <input type="search" id="qRes" autocomplete="off" placeholder="Buscar por nombre, teléfono o código…">
+        </div>
+        <button class="btn sm" id="resRecargar" type="button">Actualizar</button>
+      </div>
+      <div id="resLista"></div>
+    </div>
+
+    <div class="card">
+      <h2>Configuración</h2>
+      <div class="check">
+        <input type="checkbox" id="r_activas">
+        <label for="r_activas" style="margin:0">Tomar reservas desde la carta</label>
+      </div>
+      <p class="hint" style="margin-top:8px">Mientras esté destildado, el botón de reservar no aparece
+        en la carta. Las reservas ya anotadas no se borran.</p>
+
+      <label for="r_texto" style="margin-top:18px">Aclaración que ve el cliente</label>
+      <input type="text" id="r_texto" maxlength="140" placeholder="Completá los datos y te confirmamos por WhatsApp.">
+
+      <div class="two" style="margin-top:14px">
+        <div>
+          <label for="r_max">Máximo de personas</label>
+          <input type="number" id="r_max" min="1" max="50" step="1">
+        </div>
+        <div>
+          <label for="r_ant">Anticipación mínima (horas)</label>
+          <input type="number" id="r_ant" min="0" max="72" step="1">
+        </div>
+      </div>
+
+      <label style="margin-top:20px">Sectores</label>
+      <p class="hint" style="margin:0 0 6px">El día que llueve, destildás el patio y deja de ofrecerse.</p>
+      <div id="r_sectores"></div>
+      <div class="pie-seccion"><button class="btn sm" id="r_addSector" type="button">+ Agregar sector</button></div>
+
+      <label style="margin-top:22px">Días y horarios</label>
+      <p class="hint" style="margin:0 0 6px">El cliente sólo puede elegir entre estos horarios, así casi
+        no hay nada que rechazar. El tope es cuántas reservas se aceptan por horario; 0 es sin límite.</p>
+      <div class="turnos" id="r_turnos"></div>
+
+      <label for="r_bloq" style="margin-top:22px">Fechas bloqueadas</label>
+      <p class="hint" style="margin:0 0 6px">Feriados, vacaciones, eventos privados.</p>
+      <div class="turno-fila">
+        <input type="date" id="r_bloq" style="width:auto; margin:0">
+        <button class="btn sm" id="r_addBloq" type="button">Agregar</button>
+      </div>
+      <div id="r_bloqLista" style="margin-top:8px"></div>
+
+      <button class="btn primary" id="saveReservas" style="width:100%; padding:13px; margin-top:22px">Guardar configuración</button>
+    </div>
   </div>
 
   <!-- ---- pestaña diseño ---- -->
@@ -862,12 +973,13 @@
   }
 
   async function pedirDatos() {
-    const [s, c, p, o, e] = await Promise.all([
+    const [s, c, p, o, e, pendientes] = await Promise.all([
       db.from("settings").select("*").eq("id", 1).maybeSingle(),
       db.from("categories").select("*").order("sort_order"),
       db.from("products").select("*").order("sort_order"),
       db.from("opciones").select("*").order("sort_order"),
-      db.from("categoria_opcion").select("*")
+      db.from("categoria_opcion").select("*"),
+      contarPendientes()
     ]);
     const err = s.error || c.error || p.error;
     if (err) throw err;
@@ -877,8 +989,19 @@
       settings: s.data || {}, categories: c.data || [], products: p.data || [],
       opciones: (o && !o.error && o.data) || [],
       enlaces: (e && !e.error && e.data) || [],
-      sinOpciones: !!(o && o.error)
+      sinOpciones: !!(o && o.error),
+      pendientes: pendientes
     };
+  }
+
+  // El número de la chapita es un adorno útil, no un dato crítico: si la
+  // tabla de reservas todavía no existe, o la consulta falla por lo que sea,
+  // devuelve cero y el panel abre igual. Nunca puede voltear la carga.
+  function contarPendientes() {
+    try {
+      return db.from("reservas").select("id").eq("estado", "pendiente").gte("fecha", hoyIso())
+        .then((r) => ((r && !r.error && r.data) || []).length, () => 0);
+    } catch (e) { return Promise.resolve(0); }
   }
 
   // Al abrir el panel después de un rato, el permiso guardado en el navegador
@@ -922,13 +1045,16 @@
     pintarOpciones();
     renderMenu();
     fillDesign();
+    pintarConfigReservas();
+    chapitaReservas(state.pendientes || 0);
   }
 
   /* ================= pestañas ================= */
   $$(".tab").forEach((t) => t.addEventListener("click", () => {
     $$(".tab").forEach((x) => x.setAttribute("aria-selected", x === t));
-    ["menu", "design", "qr", "backup", "stats"].forEach((k) => ($("#tab-" + k).hidden = k !== t.dataset.tab));
+    ["menu", "reservas", "design", "qr", "backup", "stats"].forEach((k) => ($("#tab-" + k).hidden = k !== t.dataset.tab));
     if (t.dataset.tab === "stats") cargarNumeros();
+    if (t.dataset.tab === "reservas") cargarReservas();
   }));
 
   /* ================= carta ================= */
@@ -2891,6 +3017,342 @@
       info.textContent = (err && err.message) || "No se pudo leer el archivo";
       console.error(err);
     }
+  });
+
+  /* ================= reservas ================= */
+  // La agenda del bar. WhatsApp sigue siendo la conversación: los botones
+  // Confirmar y Rechazar marcan la reserva Y abren la respuesta ya escrita,
+  // para que nadie tenga que hacer lo mismo dos veces.
+
+  const DIAS_SEM = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+  const MESES_R = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+                   "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  let reservas = [];
+  let reservasCargando = false;
+
+  const jsonDe = (v, x) => {
+    try { return typeof v === "string" ? JSON.parse(v) : (v == null ? x : v); } catch (e) { return x; }
+  };
+  const sectoresCfg = () => jsonDe(state.settings.reservas_sectores, []) || [];
+  const turnosCfg   = () => jsonDe(state.settings.reservas_turnos, {}) || {};
+  const bloqCfg     = () => jsonDe(state.settings.reservas_bloqueadas, []) || [];
+
+  function fechaLinda(f, h) {
+    const p = String(f || "").split("-");
+    if (p.length !== 3) return f || "";
+    const d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    return DIAS_SEM[d.getDay()] + " " + d.getDate() + " de " + MESES_R[d.getMonth()] +
+           (h ? ", " + String(h).slice(0, 5) : "");
+  }
+  const hoyIso = () => {
+    const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }));
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") +
+           "-" + String(d.getDate()).padStart(2, "0");
+  };
+
+  // El cliente escribe su número como se lo sabe de memoria: "341 555-9876".
+  // Sin el prefijo de país el enlace no abre nada, así que se completa acá.
+  function waDe(numero, texto) {
+    let d = String(numero || "").replace(/\D/g, "");
+    if (!d) return null;
+    d = d.replace(/^0+/, "");                       // 0341… → 341…
+    if (d.slice(0, 2) === "54") {
+      d = "549" + d.slice(2).replace(/^9/, "");     // ya venía con país
+    } else {
+      // "0341 15 555-9876": el viejo 15 va después del código de área. Sólo
+      // se saca cuando la cuenta da: un número nacional son 10 dígitos, y
+      // con el 15 en el medio son 12. Sin esa condición, un "3415559876"
+      // perfectamente válido perdía dos dígitos por el 15 del principio.
+      if (d.length === 12) d = d.replace(/^(\d{2,4})15(\d{6,8})$/, "$1$2");
+      d = "549" + d;
+    }
+    if (d.length < 12) return null;
+    return "https://wa.me/" + d + (texto ? "?text=" + encodeURIComponent(texto) : "");
+  }
+
+  // El número rojo sobre la pestaña: lo que hay sin responder. Es lo que
+  // hace que no importe demasiado en qué lugar de la fila esté la pestaña —
+  // abran el panel por lo que abran, van a ver que hay algo esperando.
+  function chapitaReservas(n) {
+    const tab = $("#tabReservas");
+    if (!tab) return;
+    tab.innerHTML = "Reservas" + (n > 0 ? '<span class="pend">' + n + "</span>" : "");
+    tab.title = n > 0
+      ? n + (n === 1 ? " reserva sin responder" : " reservas sin responder")
+      : "Reservas";
+  }
+
+  async function cargarReservas() {
+    if (reservasCargando) return;
+    reservasCargando = true;
+    $("#resLista").innerHTML = '<p class="hint" style="margin:0">Cargando…</p>';
+    const desde = hoyIso();
+    const { data, error } = await db.from("reservas").select("*")
+      .gte("fecha", desde).order("fecha").order("hora");
+    reservasCargando = false;
+    if (error) {
+      const falta = /relation|does not exist|function/i.test(error.message || "");
+      $("#resLista").innerHTML = '<p class="hint" style="margin:0">' +
+        (falta ? "Todavía no está creada la tabla de reservas. Corré <b>reservas.sql</b> en Supabase."
+               : "No se pudieron cargar las reservas: " + esc(error.message || "")) + "</p>";
+      $("#resResumen").innerHTML = "";
+      return;
+    }
+    reservas = data || [];
+    pintarReservas();
+    chapitaReservas(reservas.filter((r) => r.estado === "pendiente").length);
+  }
+
+  function pintarReservas() {
+    const q = normalizar(($("#qRes") && $("#qRes").value) || "").trim();
+    const hoy = hoyIso();
+    const visibles = reservas.filter((r) => {
+      if (!q) return true;
+      return normalizar([r.nombre, r.apellido, r.telefono, r.codigo].join(" ")).indexOf(q) !== -1;
+    });
+
+    const deHoy = reservas.filter((r) => r.fecha === hoy && r.estado !== "rechazada" && r.estado !== "cancelada");
+    const pend = reservas.filter((r) => r.estado === "pendiente");
+    $("#resResumen").innerHTML =
+      "<span>Hoy: <b>" + deHoy.length + "</b> " + (deHoy.length === 1 ? "reserva" : "reservas") + "</span>" +
+      "<span><b>" + deHoy.reduce((a, r) => a + (Number(r.personas) || 0), 0) + "</b> personas hoy</span>" +
+      "<span><b>" + pend.length + "</b> sin responder</span>";
+
+    if (!visibles.length) {
+      $("#resLista").innerHTML = '<p class="res-vacio">' +
+        (q ? "Nada con “" + esc(q) + "”." : "No hay reservas para hoy ni para los próximos días.") + "</p>";
+      return;
+    }
+
+    const orden = { pendiente: 0, confirmada: 1, cancelada: 2, rechazada: 3 };
+    visibles.sort((a, b) => (orden[a.estado] - orden[b.estado]) ||
+      (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0) ||
+      (a.hora < b.hora ? -1 : 1));
+
+    $("#resLista").innerHTML = visibles.map((r) => {
+      const wa = waDe(r.telefono);
+      const etiqueta = r.estado === "pendiente" ? "" :
+        ' <span class="badge">' + (r.estado === "confirmada" ? "confirmada"
+          : r.estado === "rechazada" ? "rechazada" : "cancelada") + "</span>";
+      return '<div class="res-card' + (r.estado === "pendiente" ? " pend" : "") +
+        (r.estado === "rechazada" || r.estado === "cancelada" ? " rech" : "") + '">' +
+        '<div class="res-top"><span class="quien">' + esc(r.nombre + " " + (r.apellido || "")).trim() +
+          "</span>" + etiqueta + '<span class="cod">' + esc(r.codigo) + "</span></div>" +
+        '<div class="res-cuando">' + esc(fechaLinda(r.fecha, r.hora)) + " · " +
+          r.personas + (r.personas === 1 ? " persona" : " personas") +
+          (r.sector ? " · " + esc(r.sector) : "") + "</div>" +
+        '<div class="res-meta">' + esc(r.telefono) +
+          (r.ocasion ? " · " + esc(r.ocasion) : "") + "</div>" +
+        (r.comentario ? '<div class="res-nota">' + esc(r.comentario) + "</div>" : "") +
+        (r.motivo ? '<div class="res-meta">Motivo: ' + esc(r.motivo) + "</div>" : "") +
+        '<div class="acts" style="margin-top:10px">' +
+          (r.estado === "pendiente"
+            ? '<button class="btn sm primary" data-res="confirmar" data-id="' + r.id + '">Confirmar</button>' +
+              '<button class="btn sm danger" data-res="rechazar" data-id="' + r.id + '">Rechazar</button>'
+            : '<button class="btn sm" data-res="pendiente" data-id="' + r.id + '">Volver a pendiente</button>') +
+          (wa ? '<a class="btn sm" href="' + esc(wa) + '" target="_blank" rel="noopener">Escribirle</a>' : "") +
+          '<button class="btn sm danger icon aparte" data-res="borrar" data-id="' + r.id + '" title="Borrar">✕</button>' +
+        "</div></div>";
+    }).join("");
+  }
+
+  const MOTIVOS = ["No tenemos lugar a esa hora", "Ese día estamos cerrados",
+                   "Somos muchos para esa mesa", "Otro motivo"];
+
+  async function responderReserva(id, nuevo) {
+    const r = reservas.find((x) => x.id === id);
+    if (!r) return;
+    let motivo = "";
+    if (nuevo === "rechazada") {
+      const elegido = prompt("¿Por qué la rechazás? Se lo mandamos por WhatsApp.\n\n" +
+        MOTIVOS.map((m, i) => (i + 1) + ". " + m).join("\n") + "\n\nEscribí el número o el motivo:");
+      if (elegido === null) return;
+      const n = Number(String(elegido).trim());
+      motivo = (n >= 1 && n <= MOTIVOS.length) ? MOTIVOS[n - 1] : String(elegido).trim();
+      if (!motivo) return;
+    }
+    const { error } = await db.from("reservas").update({
+      estado: nuevo, motivo: motivo,
+      atendida_at: nuevo === "pendiente" ? null : new Date().toISOString()
+    }).eq("id", id);
+    if (error) return fail(error);
+
+    r.estado = nuevo; r.motivo = motivo;
+    pintarReservas();
+    chapitaReservas(reservas.filter((x) => x.estado === "pendiente").length);
+    if (nuevo === "pendiente") return toast("Vuelve a quedar pendiente");
+
+    const bar = state.settings.bar_name || "";
+    const texto = nuevo === "confirmada"
+      ? "¡Hola " + r.nombre + "! Te confirmamos la reserva " + r.codigo + ": " +
+        fechaLinda(r.fecha, r.hora) + ", " + r.personas +
+        (r.personas === 1 ? " persona" : " personas") +
+        (r.sector ? " · " + r.sector : "") + ". ¡Te esperamos!" + (bar ? " — " + bar : "")
+      : "¡Hola " + r.nombre + "! Lamentablemente no podemos tomar la reserva " + r.codigo +
+        " para " + fechaLinda(r.fecha, r.hora) + ": " + motivo.toLowerCase() +
+        ". ¿Querés que veamos otro día u horario?" + (bar ? " — " + bar : "");
+    const url = waDe(r.telefono, texto);
+    toast(nuevo === "confirmada" ? "Confirmada · abriendo WhatsApp" : "Rechazada · abriendo WhatsApp");
+    if (url) window.open(url, "_blank", "noopener");
+  }
+
+  async function borrarReserva(id) {
+    const r = reservas.find((x) => x.id === id);
+    if (!r) return;
+    if (!confirm("¿Borrar la reserva de " + r.nombre + " (" + r.codigo + ")?\n\nNo se puede deshacer.")) return;
+    const { error } = await db.from("reservas").delete().eq("id", id);
+    if (error) return fail(error);
+    reservas = reservas.filter((x) => x.id !== id);
+    pintarReservas();
+    toast("Reserva borrada");
+  }
+
+  $("#resLista").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-res]");
+    if (!b) return;
+    const id = b.dataset.id, que = b.dataset.res;
+    if (que === "borrar") return borrarReserva(id);
+    responderReserva(id, que === "confirmar" ? "confirmada"
+      : que === "rechazar" ? "rechazada" : "pendiente");
+  });
+  $("#qRes").addEventListener("input", pintarReservas);
+  $("#resRecargar").addEventListener("click", cargarReservas);
+
+  /* ---- configuración ---- */
+
+  function pintarConfigReservas() {
+    const s = state.settings;
+    $("#r_activas").checked = !!s.reservas_activas;
+    $("#r_texto").value = s.reservas_texto || "";
+    $("#r_max").value = s.reservas_max == null ? 10 : s.reservas_max;
+    $("#r_ant").value = s.reservas_anticipacion == null ? 2 : s.reservas_anticipacion;
+
+    $("#r_sectores").innerHTML = sectoresCfg().map((x, i) =>
+      '<div class="turno-fila" style="margin-top:6px">' +
+      '<span class="check" style="margin:0"><input type="checkbox" class="r-sec-on" data-i="' + i + '"' +
+        (x.activo !== false ? " checked" : "") + "></span>" +
+      '<input type="text" class="r-sec-n" data-i="' + i + '" maxlength="30" value="' + esc(x.nombre || "") +
+        '" style="flex:1 1 160px; margin:0">' +
+      '<button class="btn sm danger icon" type="button" data-sec-del="' + i + '" title="Quitar">✕</button>' +
+      "</div>").join("") ||
+      '<p class="hint" style="margin:0">Sin sectores: el cliente no elige dónde sentarse.</p>';
+
+    const turnos = turnosCfg();
+    $("#r_turnos").innerHTML = [1, 2, 3, 4, 5, 6, 0].map((d) => {
+      const t = turnos[String(d)] || null;
+      return '<div class="turno-fila' + (t ? "" : " off") + '" data-dia="' + d + '">' +
+        '<span class="check" style="margin:0"><input type="checkbox" class="r-dia-on" data-d="' + d + '"' +
+          (t ? " checked" : "") + "></span>" +
+        '<span class="dia">' + DIAS_SEM[d].charAt(0).toUpperCase() + DIAS_SEM[d].slice(1) + "</span>" +
+        '<input type="time" class="r-desde" data-d="' + d + '" value="' + esc((t && t.desde) || "20:00") + '">' +
+        '<span class="hint" style="margin:0">a</span>' +
+        '<input type="time" class="r-hasta" data-d="' + d + '" value="' + esc((t && t.hasta) || "23:00") + '">' +
+        '<select class="r-paso" data-d="' + d + '">' +
+          [15, 30, 60].map((p) => '<option value="' + p + '"' +
+            (Number((t && t.paso) || 30) === p ? " selected" : "") + ">cada " + p + " min</option>").join("") +
+        "</select>" +
+        '<input type="number" class="r-tope" data-d="' + d + '" min="0" max="99" value="' +
+          Number((t && t.tope) || 0) + '" title="Tope por horario (0 = sin límite)">' +
+        "</div>";
+    }).join("");
+
+    const bloq = bloqCfg();
+    $("#r_bloqLista").innerHTML = bloq.length
+      ? bloq.slice().sort().map((f) =>
+          '<span class="badge" style="margin:0 6px 6px 0; display:inline-block">' + esc(fechaLinda(f, "")) +
+          ' <button class="btn sm danger icon" type="button" data-bloq-del="' + esc(f) +
+          '" style="padding:0 5px; margin-left:4px">✕</button></span>').join("")
+      : '<p class="hint" style="margin:0">Ninguna.</p>';
+  }
+
+  $("#r_turnos").addEventListener("change", (e) => {
+    if (e.target.classList.contains("r-dia-on")) {
+      const fila = e.target.closest(".turno-fila");
+      fila.classList.toggle("off", !e.target.checked);
+    }
+  });
+  $("#r_sectores").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-sec-del]");
+    if (!b) return;
+    const lista = leerSectoresDelForm();
+    lista.splice(Number(b.dataset.secDel), 1);
+    state.settings.reservas_sectores = lista;
+    pintarConfigReservas();
+    chapitaReservas(state.pendientes || 0);
+  });
+  $("#r_addSector").addEventListener("click", () => {
+    const lista = leerSectoresDelForm();
+    lista.push({ nombre: "Nuevo sector", activo: true });
+    state.settings.reservas_sectores = lista;
+    pintarConfigReservas();
+    chapitaReservas(state.pendientes || 0);
+  });
+  $("#r_addBloq").addEventListener("click", () => {
+    const v = $("#r_bloq").value;
+    if (!v) return;
+    const lista = bloqCfg().slice();
+    if (lista.indexOf(v) === -1) lista.push(v);
+    state.settings.reservas_bloqueadas = lista;
+    $("#r_bloq").value = "";
+    pintarConfigReservas();
+    chapitaReservas(state.pendientes || 0);
+  });
+  $("#r_bloqLista").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-bloq-del]");
+    if (!b) return;
+    state.settings.reservas_bloqueadas = bloqCfg().filter((f) => f !== b.dataset.bloqDel);
+    pintarConfigReservas();
+    chapitaReservas(state.pendientes || 0);
+  });
+
+  function leerSectoresDelForm() {
+    return $$("#r_sectores .r-sec-n").map((inp) => ({
+      nombre: inp.value.trim(),
+      activo: !!($("#r_sectores").querySelector('.r-sec-on[data-i="' + inp.dataset.i + '"]') || {}).checked
+    })).filter((x) => x.nombre);
+  }
+
+  function leerTurnosDelForm() {
+    const out = {};
+    $$("#r_turnos .turno-fila").forEach((fila) => {
+      const d = fila.dataset.dia;
+      if (!fila.querySelector(".r-dia-on").checked) return;
+      const desde = fila.querySelector(".r-desde").value || "20:00";
+      const hasta = fila.querySelector(".r-hasta").value || "23:00";
+      if (hasta <= desde) return;          // un turno al revés no se guarda
+      out[d] = {
+        desde: desde, hasta: hasta,
+        paso: Number(fila.querySelector(".r-paso").value) || 30,
+        tope: Math.max(0, Number(fila.querySelector(".r-tope").value) || 0)
+      };
+    });
+    return out;
+  }
+
+  $("#saveReservas").addEventListener("click", async () => {
+    const btn = $("#saveReservas");
+    btn.disabled = true;
+    const turnos = leerTurnosDelForm();
+    const body = {
+      reservas_activas: $("#r_activas").checked,
+      reservas_texto: $("#r_texto").value.trim(),
+      reservas_max: Math.max(1, Number($("#r_max").value) || 10),
+      reservas_anticipacion: Math.max(0, Number($("#r_ant").value) || 0),
+      reservas_sectores: leerSectoresDelForm(),
+      reservas_turnos: turnos,
+      reservas_bloqueadas: bloqCfg()
+    };
+    const { error } = await db.from("settings").update(body).eq("id", 1);
+    btn.disabled = false;
+    if (error) return fail(error);
+    if (body.reservas_activas && !Object.keys(turnos).length) {
+      toast("Guardado, pero sin ningún día marcado no se puede reservar", true);
+    } else if (body.reservas_activas && !waDe(state.settings.whatsapp)) {
+      toast("Guardado, pero falta cargar el WhatsApp del bar en Diseño", true);
+    } else {
+      toast("Configuración guardada");
+    }
+    loadAll();
   });
 
   /* ================= números ================= */
