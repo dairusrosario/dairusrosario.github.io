@@ -166,6 +166,67 @@
      así, al elegir, no hay salto ni recarga. */
   body.portada-abierta .wrap{visibility:hidden}
 
+  /* ---------- reservas ---------- */
+  .btn-reservar{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    border:1px solid var(--accent); background:transparent; color:var(--accent-text);
+    border-radius:999px; padding:12px 26px; font:inherit; font-size:.92rem; cursor:pointer;
+    letter-spacing:.04em;
+  }
+  .btn-reservar:hover{background:transparent; background:color-mix(in srgb, var(--accent) 14%, transparent)}
+  .portada-caja .btn-reservar{margin-top:20px}
+  #footer .btn-reservar{margin:22px auto 0; display:flex; width:fit-content}
+
+  dialog#resDlg{
+    border:none; padding:0; width:min(480px, 94vw); border-radius:16px;
+    background:var(--bg); color:var(--ink); max-height:88vh;
+  }
+  dialog#resDlg::backdrop{background:rgba(0,0,0,.55)}
+  .res-cuerpo{padding:24px 22px; max-height:calc(88vh - 76px); overflow-y:auto}
+  .res-cuerpo h2{font-family:var(--font); font-size:1.45rem; margin:0 0 4px; font-weight:600}
+  .res-cuerpo .sub{color:var(--ink-soft); font-size:.88rem; margin:0 0 18px}
+  .res-campo{margin-top:15px}
+  .res-campo > label{display:block; font-size:.76rem; letter-spacing:.1em; text-transform:uppercase;
+                     color:var(--ink-soft); margin-bottom:6px}
+  .res-cuerpo input, .res-cuerpo select, .res-cuerpo textarea{
+    width:100%; font:inherit; font-size:1rem; color:var(--ink); background:transparent;
+    border:1px solid var(--line); border-radius:10px; padding:11px 13px;
+  }
+  .res-cuerpo textarea{min-height:74px; resize:vertical}
+  .res-cuerpo input:focus, .res-cuerpo select:focus, .res-cuerpo textarea:focus{
+    outline:none; border-color:var(--accent);
+  }
+  .res-dos{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .res-opciones{display:flex; flex-wrap:wrap; gap:8px}
+  .res-opciones button{
+    border:1px solid var(--line); background:transparent; color:var(--ink-soft);
+    border-radius:999px; padding:9px 16px; font:inherit; font-size:.9rem; cursor:pointer;
+  }
+  .res-opciones button[aria-pressed="true"]{
+    border-color:var(--accent); color:var(--ink); font-weight:600;
+    background:transparent; background:color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  .res-pie{display:flex; gap:10px; justify-content:flex-end; padding:14px 22px;
+           border-top:1px solid var(--line)}
+  .res-pie button{border:1px solid var(--line); background:transparent; color:var(--ink-soft);
+                  border-radius:999px; padding:11px 20px; font:inherit; font-size:.92rem; cursor:pointer}
+  .res-pie button.ok{background:var(--accent); border-color:var(--accent); color:var(--accent-ink); font-weight:600}
+  .res-pie button[disabled]{opacity:.55; cursor:default}
+  .res-error{color:#b3401f; font-size:.9rem; margin-top:14px}
+  :root[data-theme="oscuro"] .res-error{color:#f0a882}
+  .res-listo{text-align:center; padding:12px 0}
+  .res-listo .tilde{font-size:2.4rem; line-height:1; color:var(--accent)}
+  .res-listo h2{margin-top:12px}
+  .res-listo .codigo{font-family:ui-monospace, Menlo, monospace; font-size:1.1rem;
+                     letter-spacing:.14em; color:var(--ink-soft); margin-top:4px}
+  .res-listo .wa{
+    display:flex; align-items:center; justify-content:center; gap:9px; margin:22px auto 0;
+    width:100%; background:var(--accent); color:var(--accent-ink); border:none;
+    border-radius:999px; padding:14px 22px; font:inherit; font-size:1rem; font-weight:600;
+    cursor:pointer; text-decoration:none;
+  }
+  .res-listo .aclara{color:var(--ink-soft); font-size:.84rem; margin-top:14px; line-height:1.5}
+
   /* ---------- buscador ---------- */
   .buscar{
     display:flex; align-items:center; gap:9px; margin:0 20px 9px;
@@ -335,7 +396,7 @@
     /* En papel salen las dos cartas, una atrás de la otra, y cada sección
        lleva escrito a cuál pertenece. La hoja es para la cocina: conviene
        que esté todo. */
-    #portada, .cambiar, .de-otra{display:none !important}
+    #portada, .cambiar, .de-otra, .btn-reservar, dialog#resDlg{display:none !important}
     main section[hidden]{display:block !important}
     body.dos-cartas .sec-head h2[data-carta]::after{
       content:" · " attr(data-carta); font-size:8pt; font-weight:400;
@@ -356,6 +417,7 @@
     <h1 id="portadaNombre">&nbsp;</h1>
     <p class="pregunta" id="portadaPregunta">¿Qué carta querés ver?</p>
     <div class="opciones" id="portadaOpciones"></div>
+    <button class="btn-reservar" id="reservarPortada" type="button" hidden></button>
   </div>
 </div>
 <div class="wrap">
@@ -378,6 +440,10 @@
   <main id="menu"><div class="state"><div class="spinner"></div>Cargando la carta…</div></main>
   <footer id="footer" hidden></footer>
 </div>
+<dialog id="resDlg" aria-label="Reservar una mesa">
+  <div class="res-cuerpo" id="resCuerpo"></div>
+  <div class="res-pie" id="resPie"></div>
+</dialog>
 <div class="lupa" id="lupa" role="dialog" aria-modal="true" aria-label="Foto del producto" hidden>
   <div><img id="lupaImg" alt=""><p id="lupaPie"></p></div>
 </div>
@@ -488,10 +554,23 @@
 
   // WhatsApp necesita el número sin símbolos. En Argentina, además, el 9 después
   // del 54: si el número no lo trae, se lo agregamos.
+  // Un cliente escribe "341 555-9876" y no "+54 9 341 555-9876". Sin el
+  // prefijo, el enlace de WhatsApp no abre nada. Acá se completa solo.
   function waLink(numero) {
     let d = String(numero || "").replace(/\D/g, "");
-    if (d.length < 8) return null;
-    if (d.slice(0, 2) === "54" && d[2] !== "9") d = "549" + d.slice(2);
+    if (!d) return null;
+    d = d.replace(/^0+/, "");                       // 0341… → 341…
+    if (d.slice(0, 2) === "54") {
+      d = "549" + d.slice(2).replace(/^9/, "");     // ya venía con país
+    } else {
+      // "0341 15 555-9876": el viejo 15 va después del código de área. Sólo
+      // se saca cuando la cuenta da: un número nacional son 10 dígitos, y
+      // con el 15 en el medio son 12. Sin esa condición, un "3415559876"
+      // perfectamente válido perdía dos dígitos por el 15 del principio.
+      if (d.length === 12) d = d.replace(/^(\d{2,4})15(\d{6,8})$/, "$1$2");
+      d = "549" + d;
+    }
+    if (d.length < 12) return null;
     return "https://wa.me/" + d;
   }
 
@@ -840,8 +919,10 @@
 
     const foot = $("#footer");
     const s = data.settings || {};
-    foot.innerHTML = horarios(s) + contacto(s) + firma();
+    foot.innerHTML = horarios(s) + contacto(s) +
+      '<button class="btn-reservar" id="reservarPie" type="button" hidden></button>' + firma();
     foot.hidden = false;
+    leerReservas(s);          // recién acá: el botón del pie ya existe
 
     filtrar($("#q").value);
     setupScrollSpy();
@@ -977,6 +1058,245 @@
     if (buscando) conteo.busqueda(texto, encontrados > 0);
   }
 
+  /* ---------- reservas ----------
+     El cliente completa, se guarda en la base y recién después se le
+     ofrece mandar el mensaje. Si no llega a apretar "enviar" en WhatsApp,
+     la reserva igual está anotada y el bar la ve en el panel. Todos los
+     controles de acá son para que el formulario sea cómodo: los que de
+     verdad cuidan son los de la función reservar() en la base. */
+  const RES = { db: null, cfg: null, datos: {}, enviando: false };
+
+  const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+  const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+                 "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+  function hoyArg() {
+    const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }));
+    return d;
+  }
+  const iso = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") +
+                     "-" + String(d.getDate()).padStart(2, "0");
+
+  function leerReservas(s) {
+    const lista = (v, x) => { try { return typeof v === "string" ? JSON.parse(v) : (v || x); } catch (e) { return x; } };
+    RES.cfg = {
+      activas: !!(s && s.reservas_activas),
+      max: Number((s && s.reservas_max) || 10),
+      anticipacion: Number((s && s.reservas_anticipacion) || 2),
+      sectores: lista(s && s.reservas_sectores, []).filter((x) => x && x.activo !== false),
+      turnos: lista(s && s.reservas_turnos, {}),
+      bloqueadas: lista(s && s.reservas_bloqueadas, []),
+      texto: (s && s.reservas_texto) || "",
+      whatsapp: (s && s.whatsapp) || ""
+    };
+    const hay = RES.cfg.activas && !!waLink(RES.cfg.whatsapp) && diasLibres().length > 0;
+    ["#reservarPortada", "#reservarPie"].forEach((sel) => {
+      const b = $(sel);
+      if (!b) return;
+      b.hidden = !hay;
+      b.textContent = "Reservar una mesa";
+    });
+    return hay;
+  }
+
+  // Los días que el bar toma reservas, salteando los bloqueados y los que
+  // ya no llegan a la anticipación mínima.
+  function diasLibres() {
+    const cfg = RES.cfg;
+    if (!cfg) return [];
+    const salida = [];
+    const base = hoyArg();
+    const limite = new Date(base.getTime() + cfg.anticipacion * 3600 * 1000);
+    for (let i = 0; i < 60 && salida.length < 40; i++) {
+      const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + i);
+      const turno = cfg.turnos[String(d.getDay())];
+      if (!turno) continue;
+      if (cfg.bloqueadas.indexOf(iso(d)) !== -1) continue;
+      if (horasLibres(d, turno, limite).length === 0) continue;
+      salida.push({ fecha: iso(d), etiqueta: etiquetaDia(d, base), turno: turno });
+    }
+    return salida;
+  }
+
+  function etiquetaDia(d, base) {
+    const dif = Math.round((d - new Date(base.getFullYear(), base.getMonth(), base.getDate())) / 86400000);
+    const nombre = dif === 0 ? "Hoy" : dif === 1 ? "Mañana"
+      : DIAS[d.getDay()].charAt(0).toUpperCase() + DIAS[d.getDay()].slice(1);
+    return nombre + " " + d.getDate() + " de " + MESES[d.getMonth()];
+  }
+
+  function horasLibres(d, turno, limite) {
+    const aMin = (h) => { const p = String(h || "").split(":"); return Number(p[0]) * 60 + Number(p[1] || 0); };
+    const desde = aMin(turno.desde), hasta = aMin(turno.hasta);
+    const paso = Math.max(Number(turno.paso) || 30, 5);
+    const salida = [];
+    for (let m = desde; m <= hasta; m += paso) {
+      const cuando = new Date(d.getFullYear(), d.getMonth(), d.getDate(), Math.floor(m / 60), m % 60);
+      if (cuando < limite) continue;
+      salida.push(String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"));
+    }
+    return salida;
+  }
+
+  function pintarFormulario(err) {
+    const cfg = RES.cfg, d = RES.datos, dias = diasLibres();
+    const elegido = dias.filter((x) => x.fecha === d.fecha)[0] || dias[0];
+    if (elegido) d.fecha = elegido.fecha;
+    const horas = elegido
+      ? horasLibres(new Date(elegido.fecha + "T12:00:00"), elegido.turno,
+                    new Date(hoyArg().getTime() + cfg.anticipacion * 3600 * 1000))
+      : [];
+    if (horas.indexOf(d.hora) === -1) d.hora = horas[0] || "";
+
+    const personas = [];
+    for (let i = 1; i <= cfg.max; i++) personas.push(i);
+
+    $("#resCuerpo").innerHTML =
+      "<h2>Reservar una mesa</h2>" +
+      '<p class="sub">' + esc(cfg.texto || "Completá los datos y te confirmamos por WhatsApp.") + "</p>" +
+
+      (cfg.sectores.length ? '<div class="res-campo"><label>¿Dónde?</label><div class="res-opciones" id="resSector">' +
+        cfg.sectores.map((x) => '<button type="button" data-v="' + esc(x.nombre) + '" aria-pressed="' +
+          (d.sector === x.nombre) + '">' + esc(x.nombre) + "</button>").join("") + "</div></div>" : "") +
+
+      '<div class="res-campo"><label for="resFecha">Día</label><select id="resFecha">' +
+        dias.map((x) => '<option value="' + x.fecha + '"' + (d.fecha === x.fecha ? " selected" : "") +
+          ">" + esc(x.etiqueta) + "</option>").join("") + "</select></div>" +
+
+      '<div class="res-dos">' +
+        '<div class="res-campo"><label for="resPersonas">Personas</label><select id="resPersonas">' +
+          personas.map((n) => '<option value="' + n + '"' + (Number(d.personas) === n ? " selected" : "") +
+            ">" + n + "</option>").join("") + "</select></div>" +
+        '<div class="res-campo"><label for="resHora">Hora</label><select id="resHora">' +
+          horas.map((h) => '<option value="' + h + '"' + (d.hora === h ? " selected" : "") +
+            ">" + h + "</option>").join("") + "</select></div>" +
+      "</div>" +
+
+      '<div class="res-dos">' +
+        '<div class="res-campo"><label for="resNombre">Nombre</label>' +
+          '<input id="resNombre" maxlength="60" autocomplete="given-name" value="' + esc(d.nombre || "") + '"></div>' +
+        '<div class="res-campo"><label for="resApellido">Apellido</label>' +
+          '<input id="resApellido" maxlength="60" autocomplete="family-name" value="' + esc(d.apellido || "") + '"></div>' +
+      "</div>" +
+
+      '<div class="res-campo"><label for="resTel">WhatsApp</label>' +
+        '<input id="resTel" inputmode="tel" maxlength="30" autocomplete="tel" placeholder="341 555-1234" value="' +
+        esc(d.telefono || "") + '"></div>' +
+
+      '<div class="res-campo"><label for="resOcasion">¿Alguna ocasión?</label><select id="resOcasion">' +
+        ["", "Cumpleaños", "Aniversario", "Reunión de trabajo", "Otra"].map((o) =>
+          '<option value="' + esc(o) + '"' + (d.ocasion === o ? " selected" : "") + ">" +
+          (o || "Nada en particular") + "</option>").join("") + "</select></div>" +
+
+      '<div class="res-campo"><label for="resNota">Algo que tengamos que saber</label>' +
+        '<textarea id="resNota" maxlength="300" placeholder="Sillita para bebé, venimos con perro, mesa tranquila…">' +
+        esc(d.comentario || "") + "</textarea></div>" +
+
+      (err ? '<p class="res-error">' + esc(err) + "</p>" : "");
+
+    $("#resPie").innerHTML =
+      '<button type="button" id="resCancelar">Cancelar</button>' +
+      '<button type="button" class="ok" id="resEnviar"' + (dias.length ? "" : " disabled") + ">Reservar</button>";
+  }
+
+  function juntarDatos() {
+    const v = (sel) => { const el = $(sel); return el ? String(el.value || "").trim() : ""; };
+    const d = RES.datos;
+    d.personas = Number(v("#resPersonas")) || 2;
+    d.hora = v("#resHora");
+    d.fecha = v("#resFecha");
+    d.nombre = v("#resNombre");
+    d.apellido = v("#resApellido");
+    d.telefono = v("#resTel");
+    d.ocasion = v("#resOcasion");
+    d.comentario = v("#resNota");
+    return d;
+  }
+
+  function textoReserva(codigo) {
+    const d = RES.datos;
+    const dia = diasLibres().filter((x) => x.fecha === d.fecha)[0];
+    return "*Reserva " + codigo + "*\n" +
+      (d.nombre + " " + (d.apellido || "")).trim() + "\n" +
+      d.personas + (d.personas === 1 ? " persona" : " personas") +
+      (d.sector ? " · " + d.sector : "") + "\n" +
+      (dia ? dia.etiqueta : d.fecha) + ", " + d.hora + "\n" +
+      (d.ocasion ? "Ocasión: " + d.ocasion + "\n" : "") +
+      (d.comentario ? "Nota: " + d.comentario + "\n" : "") +
+      "Mi WhatsApp: " + d.telefono;
+  }
+
+  function pintarListo(codigo) {
+    const base = waLink(RES.cfg.whatsapp);
+    const enlace = base ? base + "?text=" + encodeURIComponent(textoReserva(codigo)) : "";
+    $("#resCuerpo").innerHTML =
+      '<div class="res-listo"><div class="tilde">✓</div>' +
+      "<h2>Reserva anotada</h2>" +
+      '<div class="codigo">' + esc(codigo) + "</div>" +
+      (enlace
+        ? '<a class="wa" href="' + esc(enlace) + '" target="_blank" rel="noopener">Avisar por WhatsApp</a>' +
+          '<p class="aclara">Ya la tenemos anotada. Tocá el botón para mandarnos el mensaje: ' +
+          "así te podemos confirmar y preguntarte si hace falta.</p>"
+        : '<p class="aclara">Ya la tenemos anotada. Nos comunicamos con vos para confirmarte.</p>') +
+      "</div>";
+    $("#resPie").innerHTML = '<button type="button" id="resCancelar">Cerrar</button>';
+  }
+
+  async function enviarReserva() {
+    if (RES.enviando) return;
+    const d = juntarDatos();
+    if (!d.nombre) return pintarFormulario("Falta tu nombre.");
+    if (String(d.telefono).replace(/[^0-9]/g, "").length < 8) {
+      return pintarFormulario("Revisá el número de WhatsApp.");
+    }
+    if (!d.fecha || !d.hora) return pintarFormulario("Elegí el día y la hora.");
+
+    RES.enviando = true;
+    const btn = $("#resEnviar");
+    if (btn) { btn.disabled = true; btn.textContent = "Reservando…"; }
+    try {
+      const { data, error } = await RES.db.rpc("reservar", {
+        p_nombre: d.nombre, p_apellido: d.apellido, p_telefono: d.telefono,
+        p_personas: d.personas, p_sector: d.sector || "", p_fecha: d.fecha,
+        p_hora: d.hora, p_ocasion: d.ocasion || "", p_comentario: d.comentario || ""
+      });
+      if (error) throw error;
+      pintarListo(data);
+    } catch (err) {
+      console.error("[carta] reserva:", err);
+      // El mensaje de la base ya viene escrito para que lo lea una persona.
+      pintarFormulario((err && (err.message || err.error_description)) ||
+        "No pudimos anotar la reserva. Probá de nuevo o escribinos.");
+    }
+    RES.enviando = false;
+  }
+
+  function abrirReserva() {
+    if (!RES.cfg || !RES.cfg.activas) return;
+    RES.datos.sector = RES.datos.sector ||
+      (RES.cfg.sectores[0] ? RES.cfg.sectores[0].nombre : "");
+    RES.datos.personas = RES.datos.personas || 2;
+    pintarFormulario("");
+    const dlg = $("#resDlg");
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+  }
+
+  document.addEventListener("click", (e) => {
+    const abrir = e.target.closest("#reservarPortada, #reservarPie");
+    if (abrir) { e.preventDefault(); return abrirReserva(); }
+    if (e.target.closest("#resCancelar")) return $("#resDlg").close();
+    if (e.target.closest("#resEnviar")) return enviarReserva();
+    const sec = e.target.closest("#resSector button");
+    if (sec) {
+      juntarDatos();
+      RES.datos.sector = sec.dataset.v;
+      return pintarFormulario("");
+    }
+  });
+  document.addEventListener("change", (e) => {
+    if (e.target && e.target.id === "resFecha") { juntarDatos(); pintarFormulario(""); }
+  });
+
   /* ---------- ampliar una foto ---------- */
   const lupa = $("#lupa");
   function cerrarLupa() {
@@ -1062,6 +1382,7 @@
 
     const db = window.supabase.createClient(baseUrl(CONFIG.SUPABASE_URL), CONFIG.SUPABASE_ANON_KEY);
     conteo.db = db;
+    RES.db = db;
 
     // Si el navegador tiene sesión de administrador, ofrecemos la vuelta al panel
     // y NO contamos la visita: el dueño recargando veinte veces no es un cliente.
