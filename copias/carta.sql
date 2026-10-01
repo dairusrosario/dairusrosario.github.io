@@ -1,6 +1,6 @@
 -- ============================================================
 --  COPIA DE SEGURIDAD DE LA CARTA — Dairus Rosario
---  Generada automáticamente el 30/9/2026, 12:45:52
+--  Generada automáticamente el 1/10/2026, 01:11:42
 --  30 secciones · 177 productos
 --
 --  PARA VOLVER ATRÁS:
@@ -28,14 +28,14 @@ with c as (
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
   ('Clásico', 'Infusión con 2 medias lunas/facturas', 4500::numeric, '', 1, true, false, false, null::text),
-  ('Tostadas', 'Infusión con 2 tostadas con mermelada y queso crema/dulce de leche/manteca', 6000, '', 2, true, false, false, null),
-  ('Tostón', 'Infusión con 1 tostón con huevos revueltos, 2 fetas de jamón cocido y 2 de queso, yogurt y granolas', 9500, '', 3, true, false, false, null),
+  ('Tostadas', 'Infusión con 2 tostadas, mermelada y queso crema/dulce de leche/manteca', 6000, '', 2, true, false, false, null),
+  ('Tostón', 'Infusión con 1 tostón con huevos revueltos, 2 fetas de jamón cocido, 2 fetas de queso, yogurt y granolas', 9500, '', 3, true, false, false, null),
   ('Avocado', 'Infusión con 2 huevos revueltos, palta, tomates cherry y semillas', 9500, '', 4, true, false, false, null),
   ('Rosarino', 'Infusión con ½ tostado/carlito', 9000, '', 5, true, false, false, null),
-  ('Proteico', 'Infusión con un tostón, 2 huevos revueltos, 2 fetas de panceta a la plancha, 2 fetas de queso, mix frutos secos', 10000, '', 6, true, false, false, null),
-  ('Saludable', 'Yogurt con granolas, frutas, dips de miel, exprimido/licuado', 10000, '', 7, true, false, false, null),
-  ('Campestre', 'Infusión en tazón de 750cc de café filtrado, pan flauta c/manteca y rodajas de salamín, jugo exprimido', 14000, '', 8, true, false, false, null),
-  ('Tostón del garden', 'Tostada crujiente base, queso untable sobre un colchón de rúcula, trozos de roquefort y pera con una infusión', 15000, '', 9, true, false, false, null)
+  ('Proteico', 'Infusión con 1 tostón, 2 huevos revueltos, 2 fetas de panceta a la plancha, 2 fetas de queso y mix de frutos secos', 10000, '', 6, true, false, false, null),
+  ('Saludable', 'Yogurt con granolas, frutas, dips de miel y exprimido/licuado', 10000, '', 7, true, false, false, null),
+  ('Campestre', 'Infusión en tazón de 750cc de café filtrado, pan flauta con manteca, rodajas de salamín y jugo exprimido', 14000, '', 8, true, false, false, null),
+  ('Tostón del garden', 'Infusión con una tostada crujiente de base, queso untable sobre un colchón de rúcula, trozos de roquefort y pera', 15000, '', 9, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 2. Cafetería
@@ -139,7 +139,7 @@ select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.f
   ('Dulce de leche', '', 4000::numeric, '', 1, true, false, false, null::text),
   ('Nutella', '', 10000, '', 2, true, false, false, null),
   ('Pastelera', '', 4000, '', 3, true, false, false, null),
-  ('Salado c/jamón y queso', '', 6000, '', 4, true, false, false, null),
+  ('Salado con jamón y queso', '', 6000, '', 4, true, false, false, null),
   ('Promo: croissant mediterranea', 'Crudo, rúcula, manteca, queso y cherry', 8000, '', 5, true, false, false, null),
   ('Croissant XXL jamón y queso', '', 13000, '', 6, true, false, false, null),
   ('Croissant 1040', 'Croissant XL, dos hamburguesas XL, lechuga, tomate, jamón, queso y dos huevos. Acompañado con papas $15.000', 22000, 'Para compartir', 7, true, false, false, null)
@@ -489,7 +489,15 @@ update public.settings set
   dia_nombre = 'Dairus',
   dia_bajada = 'Día',
   noche_nombre = 'Secret Garden',
-  noche_bajada = 'Noche'
+  noche_bajada = 'Noche',
+  reservas_activas = true,
+  reservas_max = 30,
+  reservas_anticipacion = 12,
+  reservas_sectores = '[object Object],[object Object]',
+  reservas_turnos = '[object Object]',
+  reservas_bloqueadas = '',
+  reservas_texto = '',
+  reservas_whatsapp = '+54 9 3436 61-5390'
 where id = 1;
 
 -- en qué opción aparece cada sección (sin fila = en todas)
