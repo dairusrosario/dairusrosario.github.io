@@ -382,12 +382,25 @@
     #logo{width:52px; height:52px; margin:0}
     h1{font-size:19pt}
     main{display:block; columns:2; column-gap:9mm}
-    section{padding-top:0; margin:0 0 5mm; break-inside:auto}
+    /* Que no se corte donde duele.
+       El navegador, en papel, no hace caso al "no cortes justo después de
+       esto": lo único que respeta de verdad es "esto no se parte". Por eso,
+       un instante antes de imprimir, el título y sus dos primeros productos
+       se meten en una cajita —.papel-arranque— y es la cajita la que no se
+       parte. Una sección larga puede seguir en la columna siguiente, pero su
+       título nunca se queda solo al pie. */
+    .papel-arranque{break-inside:avoid; page-break-inside:avoid}
+    /* El último de la cajita no es el último de la sección: le devolvemos
+       su rayita, que se la había comido el :last-child. */
+    .papel-arranque .item:last-child:not(.ultimo){border-bottom:1px solid var(--line-soft)}
+    .sec-head{break-after:avoid; page-break-after:avoid; break-inside:avoid}
+    .sec-head h2{break-after:avoid; page-break-after:avoid}
+    section{padding-top:0; margin:0 0 5mm}
     section.con-foto{padding-top:0}
     .sec-head{break-after:avoid; padding-bottom:6px; margin-bottom:2px}
     h2{font-size:11.5pt}
     h2::after{margin-top:5px}
-    .item{break-inside:avoid; padding:5px 0; font-size:9.5pt}
+    .item{break-inside:avoid; page-break-inside:avoid; padding:5px 0; font-size:9.5pt}
     .item-name{font-size:9.5pt}
     .item-price{font-size:9.5pt}
     .item-desc{font-size:8pt; margin-top:2px}
@@ -397,11 +410,16 @@
     /* En papel salen las dos cartas, una atrás de la otra, y cada sección
        lleva escrito a cuál pertenece. La hoja es para la cocina: conviene
        que esté todo. */
-    #portada, .cambiar, .de-otra, .btn-reservar, dialog#resDlg{display:none !important}
+    #portada, .cambiar, .btn-reservar, dialog#resDlg{display:none !important}
     main section[hidden]{display:block !important}
-    body.dos-cartas .sec-head h2[data-carta]::after{
-      content:" · " attr(data-carta); font-size:8pt; font-weight:400;
-      color:#666; letter-spacing:.04em;
+    /* A qué carta pertenece cada sección: al costado del título y con la
+       misma chapita que se ve en el panel, no debajo. */
+    .de-otra{
+      display:inline-block !important; margin-left:9px; padding:1px 7px;
+      font-family:var(--body-font); font-size:7pt; font-weight:400;
+      letter-spacing:.08em; text-transform:uppercase; color:#555;
+      border:1px solid #c9c9c9; border-radius:999px;
+      vertical-align:middle; white-space:nowrap;
     }
     /* En papel las fotos de producto no van: gastan tinta y la hoja es
        para la cocina o el mostrador, no para vender. */
@@ -933,9 +951,50 @@
     // impresión. Es lo que usa el botón del panel.
     if (/[?&]imprimir\b/.test(location.search) && !render._imprimio) {
       render._imprimio = true;
+      prepararPapel();
       setTimeout(() => window.print(), 600);
     }
   }
+
+  /* ---------- la hoja ----------
+     El navegador no hace caso cuando se le pide "no cortes justo después del
+     título". Lo único que respeta de verdad es "esto no se parte". Así que un
+     instante antes de imprimir le damos la orden en el idioma que entiende:
+     el título y sus dos primeros productos se meten en una cajita, y la
+     cajita no se parte. Si la sección es larga, sigue en la columna de al
+     lado; lo que ya no pasa es que el título quede solo al pie de la hoja.
+     Al terminar se deshace, para que la pantalla quede como estaba. */
+  function prepararPapel() {
+    [].slice.call(document.querySelectorAll("main section")).forEach((sec) => {
+      if (sec.querySelector(".papel-arranque")) return;     // ya está armada
+      const cabeza = sec.querySelector(".sec-head");
+      if (!cabeza || cabeza.parentNode !== sec) return;
+      const caja = document.createElement("div");
+      caja.className = "papel-arranque";
+      sec.insertBefore(caja, cabeza);
+      caja.appendChild(cabeza);
+      // Dos productos alcanzan: lo justo para que el título no quede huérfano
+      // y lo poco para que la cajita nunca sea más alta que una columna.
+      let llevan = 0, vueltas = 0;
+      while (llevan < 2 && vueltas++ < 8) {
+        const prod = caja.nextElementSibling;
+        if (!prod || !prod.classList.contains("item")) break;
+        caja.appendChild(prod);
+        if (!prod.hidden) llevan++;
+      }
+    });
+  }
+
+  function deshacerPapel() {
+    [].slice.call(document.querySelectorAll(".papel-arranque")).forEach((caja) => {
+      const sec = caja.parentNode;
+      while (caja.firstChild) sec.insertBefore(caja.firstChild, caja);
+      sec.removeChild(caja);
+    });
+  }
+
+  addEventListener("beforeprint", prepararPapel);
+  addEventListener("afterprint", deshacerPapel);
 
   /* ---------- conteo ----------
      Sólo contadores: cuántas veces se abrió la carta, qué secciones se
