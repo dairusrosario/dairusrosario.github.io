@@ -130,15 +130,40 @@
   .row .info{min-width:0; display:flex; gap:11px; align-items:center}
   .row .info .txt{min-width:0}
   .row .mini{width:46px; height:46px; flex:0 0 auto; object-fit:cover;
-             border-radius:8px; border:1px solid var(--line); background:#f0efec}
+             border-radius:8px; border:1px solid var(--line); background:#f0efec; display:block}
+  /* Quitar la foto se pide desde la foto misma. Antes era un botón más en la
+     fila, y era el único que aparecía en unos productos y en otros no: con él
+     ahí, ningún producto tenía los botones en el mismo lugar que el de al lado. */
+  .row .minibox{position:relative; flex:0 0 auto; line-height:0}
+  .row .quitafoto{position:absolute; top:-7px; right:-7px; width:22px; height:22px;
+                  border-radius:50%; border:1px solid var(--line); background:var(--card);
+                  color:var(--danger); font-size:.7rem; line-height:1; padding:0; cursor:pointer;
+                  display:grid; place-items:center; box-shadow:0 1px 3px rgba(0,0,0,.14)}
+  .row .quitafoto:hover{border-color:#e8cfcf}
   .row .t{font-weight:500; display:flex; flex-wrap:wrap; align-items:center; gap:4px 7px}
   .row .d{color:var(--soft); font-size:.82rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .row .p{font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right}
   .row .acts{grid-column:1 / -1; justify-content:flex-end}
-  /* Los botones que cambian de texto llevan ancho fijo: tocar "Agotado" no
-     tiene por qué correr media fila para el costado. */
-  .row .acts [data-act="pagotado"]{min-width:5.4rem}
-  .row .acts [data-act="ptoggle"]{min-width:5rem}
+  /* El dibujito que reemplaza a la palabra en el celular. */
+  .ico{display:none; width:17px; height:17px; fill:none; stroke:currentColor;
+       stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+  .guia-iconos{display:none}
+  .guia-iconos span{display:inline-flex; align-items:center; gap:4px; margin-right:12px;
+                    white-space:nowrap}
+  .guia-iconos .ico{display:inline-block; width:15px; height:15px}
+  /* En el celular los ocho botones del producto entran en un solo renglón
+     debajo del nombre, repartidos en partes iguales. Para que entren, las
+     palabras dejan lugar al dibujito: el texto sigue ahí para los lectores de
+     pantalla y aparece al mantener el dedo apoyado. */
+  @media (max-width:999px){
+    .guia-iconos{display:block; margin-top:8px; line-height:2}
+    .row .acts{display:flex; flex-wrap:nowrap; gap:5px; margin-left:0}
+    .row .acts .btn{flex:1 1 0; min-width:0; padding:8px 0; display:grid; place-items:center}
+    .row .acts .ico{display:block}
+    .row .acts .rot{position:absolute; width:1px; height:1px; margin:-1px;
+                    overflow:hidden; clip-path:inset(50%)}
+    .row .acts .aparte{margin-left:0}
+  }
   /* Borrar, separado del resto: un dedo gordo no tiene que caer acá
      queriendo tocar Editar. */
   .acts .aparte{margin-left:10px}
@@ -155,8 +180,12 @@
     /* Ancho fijo también para los botones: así caen siempre en la misma
        columna, tenga el producto foto o no. Al que la tiene le aparece
        "Quitar" asomando por la izquierda, y nada más se mueve. */
-    .row{grid-template-columns:minmax(190px, 1fr) 5.5rem 33rem}
+    .row{grid-template-columns:minmax(190px, 1fr) 5.5rem 28rem}
     .row .acts{grid-column:auto; flex-wrap:nowrap}
+    /* Los que cambian de texto llevan ancho fijo: tocar "Agotado" no tiene por
+       qué correr media fila para el costado. */
+    .row .acts [data-act="pagotado"]{min-width:5.4rem}
+    .row .acts [data-act="ptoggle"]{min-width:5rem}
   }
 
   /* formularios */
@@ -368,6 +397,15 @@
 </style>
 </head>
 <body>
+<!-- Los dibujitos de los botones del producto, dibujados una sola vez: en el
+     celular reemplazan a la palabra, que no entraría en el renglón. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-lapiz" viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.8 2.8 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></symbol>
+  <symbol id="i-camara" viewBox="0 0 24 24"><path d="M3 8.5h3.2l1.8-2h8l1.8 2H21v11H3z"/><circle cx="12" cy="13.5" r="3.4"/></symbol>
+  <symbol id="i-agotado" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M6 18 18 6"/></symbol>
+  <symbol id="i-ojo" viewBox="0 0 24 24"><path d="M2.5 12S6.3 6.5 12 6.5 21.5 12 21.5 12 17.7 17.5 12 17.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+  <symbol id="i-ojo-no" viewBox="0 0 24 24"><path d="M3.5 3.5l17 17"/><path d="M10.2 6.8A10.6 10.6 0 0 1 12 6.5c5.7 0 9.5 5.5 9.5 5.5a18 18 0 0 1-3.4 3.8"/><path d="M6.4 8.4A17.6 17.6 0 0 0 2.5 12S6.3 17.5 12 17.5a10.4 10.4 0 0 0 3.3-.5"/></symbol>
+</svg>
 
 <!-- ============ ARRANQUE ============
      Se ve desde el primer instante, mientras averiguamos si hay sesión
@@ -427,6 +465,9 @@
   <!-- ---- pestaña carta ---- -->
   <div id="tab-menu">
     <p class="hint" style="margin-top:16px">Los cambios se publican al instante. Lo que ocultes deja de verse en la carta pública, pero no se borra. Las fotos podés subirlas de cualquier tamaño: el panel las ajusta solo.</p>
+    <!-- En el celular los botones del producto son dibujitos, para que los
+         ocho entren en un renglón. Esta línea dice cuál es cuál. -->
+    <p class="hint guia-iconos">Qué es cada botón: <span>★ destacado</span><span><svg class="ico"><use href="#i-lapiz"></use></svg> editar</span><span><svg class="ico"><use href="#i-camara"></use></svg> foto</span><span>↑ ↓ mover</span><span><svg class="ico"><use href="#i-agotado"></use></svg> hoy no hay</span><span><svg class="ico"><use href="#i-ojo-no"></use></svg> ocultar</span><span>✕ borrar</span></p>
     <div class="buscar-admin">
       <div class="campo">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5l-4-4"/></svg>
@@ -1162,7 +1203,10 @@
           ${items.length ? items.map((p, j) => `
             <div class="row${p.visible ? "" : " muted"}" data-busca="${esc(normalizar([p.name, p.description, p.price_note].join(" ")))}">
               <div class="info">
-                ${p.image_url ? '<img class="mini" src="' + esc(p.image_url) + '" alt="" loading="lazy">' : ""}
+                ${p.image_url
+                  ? '<span class="minibox"><img class="mini" src="' + esc(p.image_url) + '" alt="" loading="lazy">' +
+                    '<button class="quitafoto" data-act="pfotodel" data-id="' + p.id + '" title="Quitar la foto" aria-label="Quitar la foto">✕</button></span>'
+                  : ""}
                 <div class="txt">
                   <div class="t"><span>${esc(p.name)}</span>${p.price_note ? '<span class="badge nota">' + esc(p.price_note) + "</span>" : ""}${p.visible ? "" : '<span class="badge">oculto</span>'}${p.sold_out ? '<span class="badge agot">agotado</span>' : ""}</div>
                   ${p.description ? '<div class="d">' + esc(p.description) + "</div>" : ""}
@@ -1174,13 +1218,12 @@
                    juntos porque son parientes), y borrar último y separado. -->
               <div class="acts">
                 <button class="btn sm icon estrella${p.featured ? " activo" : ""}" data-act="pdestacar" data-id="${p.id}" aria-pressed="${!!p.featured}" title="${p.featured ? "Sacar de Los más pedidos" : "Destacar: lo suma a Los más pedidos"}">★</button>
-                <button class="btn sm" data-act="pedit" data-id="${p.id}">Editar</button>
-                <button class="btn sm" data-act="pfoto" data-id="${p.id}" title="${p.image_url ? "Cambiar la foto" : "Ponerle una foto"}">Foto</button>
-                ${p.image_url ? '<button class="btn sm danger" data-act="pfotodel" data-id="' + p.id + '">Quitar</button>' : ""}
+                <button class="btn sm" data-act="pedit" data-id="${p.id}" title="Editar"><svg class="ico"><use href="#i-lapiz"></use></svg><span class="rot">Editar</span></button>
+                <button class="btn sm" data-act="pfoto" data-id="${p.id}" title="${p.image_url ? "Cambiar la foto" : "Ponerle una foto"}"><svg class="ico"><use href="#i-camara"></use></svg><span class="rot">Foto</span></button>
                 <button class="btn sm icon" data-act="pup" data-id="${p.id}" ${j === 0 ? "disabled" : ""} title="Subir">↑</button>
                 <button class="btn sm icon" data-act="pdown" data-id="${p.id}" ${j === items.length - 1 ? "disabled" : ""} title="Bajar">↓</button>
-                <button class="btn sm${p.sold_out ? " activo" : ""}" data-act="pagotado" data-id="${p.id}" title="Marcar que hoy no hay">${p.sold_out ? "Hay" : "Agotado"}</button>
-                <button class="btn sm" data-act="ptoggle" data-id="${p.id}">${p.visible ? "Ocultar" : "Mostrar"}</button>
+                <button class="btn sm${p.sold_out ? " activo" : ""}" data-act="pagotado" data-id="${p.id}" title="${p.sold_out ? "Volver a tenerlo" : "Marcar que hoy no hay"}"><svg class="ico"><use href="#i-agotado"></use></svg><span class="rot">${p.sold_out ? "Hay" : "Agotado"}</span></button>
+                <button class="btn sm" data-act="ptoggle" data-id="${p.id}" title="${p.visible ? "Ocultar de la carta" : "Mostrar en la carta"}"><svg class="ico"><use href="${p.visible ? "#i-ojo-no" : "#i-ojo"}"></use></svg><span class="rot">${p.visible ? "Ocultar" : "Mostrar"}</span></button>
                 <button class="btn sm danger icon aparte" data-act="pdel" data-id="${p.id}" title="Borrar">✕</button>
               </div>
             </div>`).join("") : '<div class="empty">Sin productos todavía.</div>'}
@@ -1484,7 +1527,9 @@
   });
 
   async function quitarFotoProd(id) {
-    const anterior = (state.products.find((p) => p.id === id) || {}).image_url;
+    const p = state.products.find((x) => x.id === id) || {};
+    if (!confirm("¿Quitar la foto de “" + (p.name || "este producto") + "”?")) return;
+    const anterior = p.image_url;
     const { error } = await db.from("products").update({ image_url: null }).eq("id", id);
     if (error) return fail(error);
     await borrarArchivo(anterior);
