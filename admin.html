@@ -24,7 +24,7 @@
   *{box-sizing:border-box}
   body{margin:0; background:var(--bg); color:var(--ink);
        font-family:'Inter', system-ui, -apple-system, sans-serif; font-size:15px; line-height:1.5}
-  .wrap{max-width:780px; margin:0 auto; padding:0 16px 96px}
+  .wrap{max-width:1000px; margin:0 auto; padding:0 16px 96px}
   h1{font-size:1.25rem; margin:0}
   h2{font-size:1rem; margin:0 0 4px}
   p.hint{color:var(--soft); font-size:.85rem; margin:0 0 16px}
@@ -117,29 +117,46 @@
   .muted{opacity:.45}
   .badge{font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:var(--soft);
          border:1px solid var(--line); border-radius:999px; padding:2px 8px; white-space:nowrap}
+  /* La aclaración del precio ("Para 2 personas", "½ pizza") va con el nombre y
+     tal cual se escribió: en mayúsculas de imprenta quedaría a los gritos. */
+  .badge.nota{text-transform:none; letter-spacing:0; font-size:.73rem}
   .items{margin-top:12px; border-top:1px solid var(--line)}
-  .row{display:grid; grid-template-columns:1fr auto; align-items:center;
+  /* La columna del precio es de ancho fijo: si cambiara con cada número, los
+     botones de cada producto arrancarían en un lugar distinto y la lista se
+     vería desprolija. */
+  .row{display:grid; grid-template-columns:1fr 5.5rem; align-items:center;
        gap:6px 10px; padding:12px 0; border-bottom:1px solid #f0efec}
   .row:last-child{border-bottom:none}
   .row .info{min-width:0; display:flex; gap:11px; align-items:center}
   .row .info .txt{min-width:0}
   .row .mini{width:46px; height:46px; flex:0 0 auto; object-fit:cover;
              border-radius:8px; border:1px solid var(--line); background:#f0efec}
-  .row .t{font-weight:500}
+  .row .t{font-weight:500; display:flex; flex-wrap:wrap; align-items:center; gap:4px 7px}
   .row .d{color:var(--soft); font-size:.82rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .row .p{font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:right}
   .row .acts{grid-column:1 / -1; justify-content:flex-end}
+  /* Los botones que cambian de texto llevan ancho fijo: tocar "Agotado" no
+     tiene por qué correr media fila para el costado. */
+  .row .acts [data-act="pagotado"]{min-width:5.4rem}
+  .row .acts [data-act="ptoggle"]{min-width:5rem}
   /* Borrar, separado del resto: un dedo gordo no tiene que caer acá
      queriendo tocar Editar. */
   .acts .aparte{margin-left:10px}
   .empty{color:var(--soft); font-size:.86rem; padding:12px 0}
   @media (min-width:620px){
     .cat-head .name{flex:1 1 auto}
-    /* minmax y no 1fr: con muchos botones, la grilla achicaba la columna del
-       producto hasta menos que la miniatura y la foto se montaba sobre el
-       precio. Con un piso, los botones pasan al renglón de abajo. */
-    .row{grid-template-columns:minmax(190px, 1fr) auto auto}
-    .row .acts{grid-column:auto}
+  }
+  /* Recién cuando la pantalla da el ancho para que entren TODOS los botones en
+     un solo renglón, el producto pasa a verse en una sola línea. Antes de eso
+     los botones van abajo, en su propio renglón: más alto, sí, pero todos los
+     productos iguales. Lo feo era el término medio, con unos botones arriba y
+     otros abajo según el largo del precio. */
+  @media (min-width:1000px){
+    /* Ancho fijo también para los botones: así caen siempre en la misma
+       columna, tenga el producto foto o no. Al que la tiene le aparece
+       "Quitar" asomando por la izquierda, y nada más se mueve. */
+    .row{grid-template-columns:minmax(190px, 1fr) 5.5rem 33rem}
+    .row .acts{grid-column:auto; flex-wrap:nowrap}
   }
 
   /* formularios */
@@ -148,6 +165,11 @@
     width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:9px;
     background:#fff; color:var(--ink); font:inherit}
   textarea{min-height:78px; resize:vertical}
+  /* Con el panel más ancho, un campo de teléfono de 90 caracteres queda
+     ridículo: los formularios se quedan en un ancho de lectura cómodo.
+     En los diálogos no, que ya vienen angostos. */
+  .card input[type=text], .card input[type=email], .card input[type=password],
+  .card input[type=number], .card select, .card textarea{max-width:560px}
   input[type=range]{width:100%}
   input:focus, select:focus, textarea:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:transparent}
   .two{display:grid; grid-template-columns:1fr 1fr; gap:12px}
@@ -1142,18 +1164,18 @@
               <div class="info">
                 ${p.image_url ? '<img class="mini" src="' + esc(p.image_url) + '" alt="" loading="lazy">' : ""}
                 <div class="txt">
-                  <div class="t">${esc(p.name)} ${p.visible ? "" : '<span class="badge">oculto</span>'}${p.sold_out ? ' <span class="badge agot">agotado</span>' : ""}</div>
+                  <div class="t"><span>${esc(p.name)}</span>${p.price_note ? '<span class="badge nota">' + esc(p.price_note) + "</span>" : ""}${p.visible ? "" : '<span class="badge">oculto</span>'}${p.sold_out ? '<span class="badge agot">agotado</span>' : ""}</div>
                   ${p.description ? '<div class="d">' + esc(p.description) + "</div>" : ""}
                 </div>
               </div>
-              <div class="p">${esc(money(p.price, sym))}${p.price_note ? " · " + esc(p.price_note) : ""}</div>
+              <div class="p">${esc(money(p.price, sym))}</div>
               <!-- Primero lo que define al producto (destacado, datos, foto,
                    lugar), después su disponibilidad (agotado y oculto, que van
                    juntos porque son parientes), y borrar último y separado. -->
               <div class="acts">
                 <button class="btn sm icon estrella${p.featured ? " activo" : ""}" data-act="pdestacar" data-id="${p.id}" aria-pressed="${!!p.featured}" title="${p.featured ? "Sacar de Los más pedidos" : "Destacar: lo suma a Los más pedidos"}">★</button>
                 <button class="btn sm" data-act="pedit" data-id="${p.id}">Editar</button>
-                <button class="btn sm" data-act="pfoto" data-id="${p.id}">${p.image_url ? "Cambiar foto" : "Foto"}</button>
+                <button class="btn sm" data-act="pfoto" data-id="${p.id}" title="${p.image_url ? "Cambiar la foto" : "Ponerle una foto"}">Foto</button>
                 ${p.image_url ? '<button class="btn sm danger" data-act="pfotodel" data-id="' + p.id + '">Quitar</button>' : ""}
                 <button class="btn sm icon" data-act="pup" data-id="${p.id}" ${j === 0 ? "disabled" : ""} title="Subir">↑</button>
                 <button class="btn sm icon" data-act="pdown" data-id="${p.id}" ${j === items.length - 1 ? "disabled" : ""} title="Bajar">↓</button>
