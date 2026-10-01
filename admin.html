@@ -506,6 +506,21 @@
 
       <button class="btn primary" id="saveReservas" style="width:100%; padding:13px; margin-top:22px">Guardar configuración</button>
     </div>
+
+    <div class="card">
+      <h2>Datos personales</h2>
+      <p class="hint">En cada reserva quedan el nombre y el teléfono de un cliente. El espacio no es
+        problema —entran más de un millón de reservas en el plan gratuito—, pero guardar datos de
+        gente para siempre y sin uso sí lo es.</p>
+      <ul class="hint">
+        <li>A los <b>90 días</b> de pasada la reserva se le sacan el nombre, el teléfono y el
+          comentario. Quedan la fecha, la hora, cuántas personas, el sector y si se confirmó: la
+          historia del bar sin las personas.</li>
+        <li>A los <b>2 años</b>, esas filas se borran.</li>
+      </ul>
+      <p class="hint" id="limpiezaEstado" style="margin:10px 0 0"></p>
+      <button class="btn sm" id="limpiarAhora" type="button" style="margin-top:12px">Limpiar ahora</button>
+    </div>
   </div>
 
   <!-- ---- pestaña diseño ---- -->
@@ -3385,6 +3400,25 @@
     });
     return out;
   }
+
+  $("#limpiarAhora").addEventListener("click", async () => {
+    if (!confirm("Se les van a sacar el nombre y el teléfono a las reservas de hace más de 90 días, " +
+                 "y se van a borrar las de hace más de 2 años.\n\nNo se puede deshacer.")) return;
+    const btn = $("#limpiarAhora");
+    btn.disabled = true; btn.textContent = "Limpiando…";
+    const { data, error } = await db.rpc("limpiar_datos");
+    btn.disabled = false; btn.textContent = "Limpiar ahora";
+    if (error) {
+      const falta = /function|does not exist/i.test(error.message || "");
+      $("#limpiezaEstado").innerHTML = falta
+        ? "Todavía no está creada la limpieza. Corré <b>limpieza.sql</b> en Supabase."
+        : "No se pudo limpiar: " + esc(error.message || "");
+      return;
+    }
+    $("#limpiezaEstado").textContent = String(data || "Listo");
+    toast("Limpieza hecha");
+    cargarReservas();
+  });
 
   $("#saveReservas").addEventListener("click", async () => {
     const btn = $("#saveReservas");
