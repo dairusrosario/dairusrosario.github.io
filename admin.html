@@ -418,11 +418,7 @@
       <h2>Opciones</h2>
       <p class="hint">Una opción es un nivel por encima de las secciones: el cliente elige una al abrir
         la carta y se despliegan las secciones de esa opción. Sirve cuando el mismo local tiene dos
-        propuestas — de día una cosa y de noche otra. <b>Sin ninguna opción, la carta se ve entera</b>, como siempre.
-        Con una sola, el cliente no elige nada y ve sólo las secciones de esa opción — que es lo que
-        pasa cuando ocultás una de dos. El QR no cambia nunca: es la misma dirección.</p>
-      <p class="hint">La foto es la del recuadro que ve el cliente al elegir. Si no le ponés ninguna,
-        toma prestada la de la primera sección de esa opción.</p>
+        propuestas — de día una cosa y de noche otra. Sin ninguna opción, la carta se ve entera.</p>
       <div id="opciones"></div>
       <div class="pie-seccion">
         <button class="btn sm" id="addOpcion">+ Nueva opción</button>
@@ -433,8 +429,7 @@
     <div class="pie-seccion" style="margin:0 0 4px">
       <button class="btn primary" id="addCat">+ Nueva sección</button>
       <button class="btn sm" id="reponerTodo" hidden></button>
-      <button class="btn sm" id="impAbrir">Importar planilla</button>
-      <button class="btn sm" id="imprimir">Imprimir la carta</button>
+      <button class="btn sm" id="impAbrir">Importar productos</button>
     </div>
     <div id="cats"></div>
   </div>
@@ -612,6 +607,14 @@
         <button class="btn primary" id="dlQr">Descargar PNG</button>
         <button class="btn" id="printQr">Imprimir cartel para la mesa</button>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>Imprimir la carta</h2>
+      <p class="hint">Saca la carta en papel, pensada para la cocina y el mostrador: dos columnas, sin
+        fotos y sin colores de fondo, con los agotados del día marcados. Si hay varias opciones, salen
+        todas, cada sección aclarando a cuál pertenece.</p>
+      <button class="btn" id="imprimir">Imprimir la carta</button>
     </div>
 
     <div class="card" id="cardEnlaceRes" hidden>
@@ -825,7 +828,7 @@
 
 <dialog id="impDlg" class="ancho">
   <div class="dlg-body alto">
-    <h2>Importar desde una planilla</h2>
+    <h2>Importar productos desde una planilla</h2>
 
     <div id="impPaso1">
       <p class="hint" style="margin-top:0">Sirve para cargar una carta entera de una vez, o para subir una
