@@ -1,6 +1,6 @@
 -- ============================================================
 --  COPIA DE SEGURIDAD DE LA CARTA — Dairus Rosario
---  Generada automáticamente el 2/10/2026, 12:35:32
+--  Generada automáticamente el 3/10/2026, 11:12:25
 --  30 secciones · 177 productos
 --
 --  PARA VOLVER ATRÁS:
@@ -372,8 +372,8 @@ select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.f
   ('Licuado con agua', 'Banana, frutilla, durazno', 4000, '', 5, true, false, false, null),
   ('Licuado con leche', 'Banana, frutilla, durazno', 6500, '', 6, true, false, false, null),
   ('Limonada', 'Jugo de limón, almíbar simple, soda, menta y jengibre', 4000, '', 7, true, false, false, null),
-  ('Limonada', 'Jugo de limón, almíbar simple, soda, jengibre y flores de jamaica', 12000, '1 Lt.', 8, true, false, false, null),
-  ('Milkshake', '', 7000, '', 9, true, false, false, null),
+  ('Milkshake', '', 7000, '', 8, true, false, false, null),
+  ('Limonada', 'Jugo de limón, almíbar simple, soda, jengibre y flores de jamaica', 12000, '1 Lt.', 9, true, false, false, null),
   ('Pomelada', 'Jugo de pomelo, almíbar simple, soda, menta y albahaca', 4000, '', 10, true, false, false, null),
   ('Pomelada', 'Jugo de pomelo, almíbar simple, soda, menta y albahaca', 12000, '1 Lt.', 11, true, false, false, null),
   ('Shootines', '', 6000, '', 12, true, false, false, null)
