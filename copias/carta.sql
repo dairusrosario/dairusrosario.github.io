@@ -1,7 +1,7 @@
 -- ============================================================
 --  COPIA DE SEGURIDAD DE LA CARTA — Dairus Rosario
---  Generada automáticamente el 9/10/2026, 12:59:00
---  30 secciones · 177 productos
+--  Generada automáticamente el 10/10/2026, 12:08:21
+--  30 secciones · 176 productos
 --
 --  PARA VOLVER ATRÁS:
 --  Supabase → SQL Editor → New query → pegar todo → Run.
@@ -349,7 +349,7 @@ select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.f
   ('Cantimpalo', '', 12000, '½ pizza', 4, true, false, false, null),
   ('Especial', '', 20000, 'Entera', 5, true, false, false, null),
   ('Especial', '', 11000, '½ pizza', 6, true, false, false, null),
-  ('La bomba del garden', 'Tomate, muzzarella, colchón de rúcula, peras, acompan̈ado con trozos de roquefort y detalles de nueces mariposas', 25000, 'Entera', 7, true, false, false, null),
+  ('La bomba del garden', 'muzzarella, colchón de rúcula, peras, acompan̈ado con trozos de roquefort y detalles de nueces mariposas', 25000, 'Entera', 7, true, false, false, null),
   ('Mariscos', '', 35000, 'Entera', 8, true, false, false, null),
   ('Mariscos', '', 18000, '½ pizza', 9, true, false, false, null),
   ('Muzzarella', '', 15000, 'Entera', 10, true, false, false, null),
@@ -452,7 +452,7 @@ with c as (
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
   ('Salentein', '', 22000::numeric, '', 1, true, false, false, null::text),
-  ('Sidra 1888', '', 9800, '', 2, true, false, false, null)
+  ('Sidra 1888', '', 18000, '', 2, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 30. Whiskys
@@ -462,8 +462,7 @@ with c as (
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
-  ('Chivas Regal', '', 7000::numeric, '', 1, true, false, false, null::text),
-  ('Jameson', '', 7500, '', 2, true, false, false, null),
+  ('Jameson', '', 7500::numeric, '', 2, true, false, false, null::text),
   ('Johnnie Walker Red Label', '', 7000, '', 3, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
