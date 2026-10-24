@@ -1,6 +1,6 @@
 -- ============================================================
 --  COPIA DE SEGURIDAD DE LA CARTA — Dairus Rosario
---  Generada automáticamente el 23/10/2026, 11:08:40
+--  Generada automáticamente el 24/10/2026, 10:11:52
 --  30 secciones · 176 productos
 --
 --  PARA VOLVER ATRÁS:
@@ -490,13 +490,13 @@ update public.settings set
   noche_nombre = 'Secret Garden',
   noche_bajada = 'Noche',
   reservas_activas = true,
-  reservas_max = 30,
+  reservas_max = 50,
   reservas_anticipacion = 12,
   reservas_sectores = '[object Object],[object Object]',
   reservas_turnos = '[object Object]',
   reservas_bloqueadas = '',
   reservas_texto = '',
-  reservas_whatsapp = '+54 9 3436 61-5390'
+  reservas_whatsapp = '+54 9 341 339-0659'
 where id = 1;
 
 -- en qué opción aparece cada sección (sin fila = en todas)
