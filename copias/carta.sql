@@ -1,6 +1,6 @@
 -- ============================================================
 --  COPIA DE SEGURIDAD DE LA CARTA — Dairus Rosario
---  Generada automáticamente el 26/10/2026, 12:59:27
+--  Generada automáticamente el 27/10/2026, 12:14:00
 --  30 secciones · 176 productos
 --
 --  PARA VOLVER ATRÁS:
