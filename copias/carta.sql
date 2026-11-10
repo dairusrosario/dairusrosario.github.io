@@ -1,6 +1,6 @@
 -- ============================================================
 --  COPIA DE SEGURIDAD DE LA CARTA — Dairus Rosario
---  Generada automáticamente el 9/11/2026, 04:39:06
+--  Generada automáticamente el 10/11/2026, 01:53:37
 --  30 secciones · 176 productos
 --
 --  PARA VOLVER ATRÁS:
@@ -387,9 +387,9 @@ with c as (
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
   ('Amstel 1 Lt.', '', 9000::numeric, '', 1, true, false, false, null::text),
-  ('Heineken 0 330 cc', '', 6500, '', 2, true, false, false, null),
+  ('porroncito Heineken 0 330 cc', '', 6500, '', 2, true, false, false, null),
   ('Heineken 1 Lt.', '', 13000, '', 3, true, false, false, null),
-  ('Heineken 330 cc', '', 6500, '', 4, true, false, false, null),
+  ('porroncito Heineken 330 cc', '', 6500, '', 4, true, false, false, null),
   ('Imperial Especiales 1 Lt.', '', 11000, '', 5, true, false, false, null),
   ('Imperial Golden 1 Lt.', '', 11000, '', 6, true, false, false, null),
   ('Porroncito 340 cc', '', 6500, '', 7, true, false, false, null)

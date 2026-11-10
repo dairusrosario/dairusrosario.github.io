@@ -1003,15 +1003,15 @@
       "image_url": null
     },
     {
-      "id": "f999a7a0-ac2b-41bd-ab67-f7b5f77627ce",
-      "category_id": "fd8b5e28-1024-4e34-be6e-c50b4e7a0e15",
-      "name": "Heineken 0 330 cc",
+      "id": "8c837329-b2bf-4f68-845b-a62fc2560d86",
+      "category_id": "bbc8e402-33e7-4fc9-b224-ce08f961f65e",
+      "name": "Chipá",
       "description": "",
-      "price": 6500,
+      "price": 1200,
       "price_note": "",
       "sort_order": 2,
       "visible": true,
-      "created_at": "2026-09-18T03:08:37.137477+00:00",
+      "created_at": "2026-09-11T02:45:34.069202+00:00",
       "sold_out": false,
       "featured": false,
       "image_url": null
@@ -1269,6 +1269,20 @@
       "image_url": null
     },
     {
+      "id": "f999a7a0-ac2b-41bd-ab67-f7b5f77627ce",
+      "category_id": "fd8b5e28-1024-4e34-be6e-c50b4e7a0e15",
+      "name": "porroncito Heineken 0 330 cc",
+      "description": "",
+      "price": 6500,
+      "price_note": "",
+      "sort_order": 2,
+      "visible": true,
+      "created_at": "2026-09-18T03:08:37.137477+00:00",
+      "sold_out": false,
+      "featured": false,
+      "image_url": null
+    },
+    {
       "id": "755ab9eb-96ab-4bac-ba9b-22c319eeeb05",
       "category_id": "e5424797-d38b-4dd2-880b-216fd5471cb1",
       "name": "Ananá",
@@ -1344,20 +1358,6 @@
       "name": "Maní",
       "description": "",
       "price": 3000,
-      "price_note": "",
-      "sort_order": 2,
-      "visible": true,
-      "created_at": "2026-09-11T02:45:34.069202+00:00",
-      "sold_out": false,
-      "featured": false,
-      "image_url": null
-    },
-    {
-      "id": "8c837329-b2bf-4f68-845b-a62fc2560d86",
-      "category_id": "bbc8e402-33e7-4fc9-b224-ce08f961f65e",
-      "name": "Chipá",
-      "description": "",
-      "price": 1200,
       "price_note": "",
       "sort_order": 2,
       "visible": true,
@@ -1943,7 +1943,7 @@
     {
       "id": "4658e75e-2c04-4d3b-ac17-bfcf95afbc3e",
       "category_id": "fd8b5e28-1024-4e34-be6e-c50b4e7a0e15",
-      "name": "Heineken 330 cc",
+      "name": "porroncito Heineken 330 cc",
       "description": "",
       "price": 6500,
       "price_note": "",
