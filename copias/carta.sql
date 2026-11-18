@@ -1,7 +1,7 @@
 -- ============================================================
 --  COPIA DE SEGURIDAD DE LA CARTA — Dairus Rosario
---  Generada automáticamente el 17/11/2026, 03:19:56
---  30 secciones · 176 productos
+--  Generada automáticamente el 18/11/2026, 02:53:28
+--  30 secciones · 177 productos
 --
 --  PARA VOLVER ATRÁS:
 --  Supabase → SQL Editor → New query → pegar todo → Run.
@@ -142,7 +142,8 @@ select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.f
   ('Salado con jamón y queso', '', 6000, '', 4, true, false, false, null),
   ('Promo: croissant mediterranea', 'Crudo, rúcula, manteca, queso y cherry', 8000, '', 5, true, false, false, null),
   ('Croissant XXL jamón y queso', '', 13000, '', 6, true, false, false, null),
-  ('Croissant 1040', 'Croissant XL, dos hamburguesas XL, lechuga, tomate, jamón, queso y dos huevos. Acompañado con papas $15.000', 22000, 'Para compartir', 7, true, false, false, null)
+  ('Croissant 1040', 'Croissant XL, dos hamburguesas XL, lechuga, tomate, jamón, queso y dos huevos. Acompañado con papas $15.000', 22000, 'Para compartir', 7, true, false, false, null),
+  ('Croissant el cora de Ella', 'Calentito por afuera y helado dentro', 7000, '', 8, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 9. Cuchariables Rosario
