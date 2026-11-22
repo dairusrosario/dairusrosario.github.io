@@ -1,7 +1,7 @@
 -- ============================================================
 --  COPIA DE SEGURIDAD DE LA CARTA — Dairus Rosario
---  Generada automáticamente el 21/11/2026, 01:40:32
---  30 secciones · 177 productos
+--  Generada automáticamente el 22/11/2026, 01:58:55
+--  30 secciones · 179 productos
 --
 --  PARA VOLVER ATRÁS:
 --  Supabase → SQL Editor → New query → pegar todo → Run.
@@ -83,7 +83,8 @@ select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.f
   ('Iced Caramel Machiatto', 'Shot de espresso, ¼ oz syrup de caramelo, leche/hielo', 5500, '', 2, true, false, false, null),
   ('Iced Flat White', 'Doble shot de espresso, leche/hielo', 5500, '', 3, true, false, false, null),
   ('Iced Latte', 'Shot de espresso, leche/hielo', 5500, '', 4, true, false, false, null),
-  ('Iced Pistacho', 'Shot de espresso, ½ oz syrup pistacho, leche/hielo', 5500, '', 5, true, false, false, null)
+  ('Iced Pistacho', 'Shot de espresso, ½ oz syrup pistacho, leche/hielo', 5500, '', 5, true, false, false, null),
+  ('Iced coffe avellana', 'Syrup de avellana, hielo, leche texturizada y cafe', 7000, '', 6, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 5. Sándwiches calientes
@@ -108,12 +109,13 @@ with c as (
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
   ('Atún', '', 5000::numeric, '', 1, true, false, false, null::text),
-  ('Carne desmechada', '', null, '', 2, true, false, false, null),
-  ('Chipá de jamón y queso', '', null, '', 3, true, false, false, null),
-  ('Pollo', '', null, '', 4, true, false, false, null),
-  ('Primavera', '', 4500, '', 5, true, false, false, null),
-  ('Primavera (Miga)', '', null, '', 6, true, false, false, null),
-  ('Vegetariano', '', null, '', 7, true, false, false, null)
+  ('Carne desmechada', 'Pan de lomo , carne desmechada', 15000, '', 2, true, false, false, null),
+  ('Chipá de jamón y queso', 'Pan de chipa jamón y queso', 7500, '', 3, true, false, false, null),
+  ('Pollo', '', 6500, '', 4, true, false, false, null),
+  ('Primavera', 'Pan de cámpora con j y , lechuga y tomate', 5000, '', 5, true, false, false, null),
+  ('Primavera (Miga)', '', 10000, '', 6, true, false, false, null),
+  ('Vegetariano', '', 6500, '', 7, true, false, false, null),
+  ('Chipa crudo y rucula', '', 12000, '', 8, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 7. Focaccias
@@ -123,10 +125,11 @@ with c as (
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
-  ('Amor', 'Mortadela c/pistacho, queso Pategras c/manteca', null::numeric, '', 1, true, false, false, null::text),
-  ('Campo', 'Salamín picado grueso y queso Pategras c/manteca', null, '', 2, true, false, false, null),
-  ('Mediterránea', 'Jamón crudo, queso Patregras, rúcula, tomates cherrys, lluvia de Parmesano c/manteca y oliva', null, '', 3, true, false, false, null),
-  ('Romántica', 'Escabeche de verduras, queso Tybo c/manteca', null, '', 4, true, false, false, null)
+  ('Amor', 'Mortadela c/pistacho, queso Pategras c/manteca', 15000::numeric, '', 1, true, false, false, null::text),
+  ('Campo', 'Salamín picado grueso y queso Pategras c/manteca', 15000, '', 2, true, false, false, null),
+  ('Mediterránea', 'Jamón crudo, queso Patregras, rúcula, tomates cherrys, lluvia de Parmesano c/manteca y oliva', 15000, '', 3, true, false, false, null),
+  ('Romántica', 'Escabeche de verduras, queso Tybo c/manteca', 13000, '', 4, true, false, false, null),
+  ('Hongos', 'Focaccia, aceite de oliva,queso y hongos pino,portobello y champignone', 15000, '', 5, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 8. Croissants
@@ -136,14 +139,14 @@ with c as (
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
-  ('Dulce de leche', '', 4000::numeric, '', 1, true, false, false, null::text),
-  ('Nutella', '', 10000, '', 2, true, false, false, null),
-  ('Pastelera', '', 4000, '', 3, true, false, false, null),
-  ('Salado con jamón y queso', '', 6000, '', 4, true, false, false, null),
-  ('Promo: croissant mediterranea', 'Crudo, rúcula, manteca, queso y cherry', 8000, '', 5, true, false, false, null),
-  ('Croissant XXL jamón y queso', '', 13000, '', 6, true, false, false, null),
-  ('Croissant 1040', 'Croissant XL, dos hamburguesas XL, lechuga, tomate, jamón, queso y dos huevos. Acompañado con papas $15.000', 22000, 'Para compartir', 7, true, false, false, null),
-  ('Croissant el cora de Ella', 'Calentito por afuera y helado dentro', 7000, '', 8, true, false, false, null)
+  ('Croiffle', 'Croissant cocido en wafflera con crema diplomata con mix de frutas', 8000::numeric, '', 1, true, false, false, null::text),
+  ('El cuore de Ella', 'Croissant Calentito por afuera y helado dentro', 8000, '', 2, true, false, false, null),
+  ('Dulce de leche', '', 7000, '', 3, true, false, false, null),
+  ('Nutella', '', 10000, '', 4, true, false, false, null),
+  ('Pastelera', '', 7500, '', 5, true, false, false, null),
+  ('mediterranea', 'Crudo, rúcula, manteca, queso y cherry', 8000, '', 6, true, false, false, null),
+  ('Salado con jamón y queso', '', 6000, '', 7, true, false, false, null),
+  ('Croiffle con pistachio', 'Croissant cocido con wafflera con ganache de pistachio y pistachio picados', 10000, '', 8, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 9. Cuchariables Rosario
@@ -165,10 +168,12 @@ with c as (
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
-  ('Choco Oreo', '', 7000::numeric, '', 1, true, false, false, null::text),
-  ('Dulce de leche y banana', '', 7000, '', 2, true, false, false, null),
-  ('Frutilla y chantilly', '', 7000, '', 3, true, false, false, null),
-  ('Helado americana, frutos rojos y salsa de caramelo', '', 7000, '', 4, true, false, false, null)
+  ('Choco Oreo', '', 8500::numeric, '', 1, true, false, false, null::text),
+  ('Dulce de leche y banana', '', 8500, '', 2, true, false, false, null),
+  ('Frutilla y chantilly', '', 8500, '', 3, true, false, false, null),
+  ('Helado americana, frutos rojos y salsa de caramelo', '', 8500, '', 4, true, false, false, null),
+  ('Waffles salado', 'Waffles, queso crema, tomate, palta y huevo frito', 9500, '', 5, true, false, false, null),
+  ('Waffles Americano', 'Waffles , palta, huevos revueltos, panceta y cheddar', 12000, '', 6, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 11. Tortas (Individuales)
@@ -202,7 +207,7 @@ select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.f
   ('Lemon Pie', '', 7000, '', 4, true, false, false, null),
   ('Matilda', '', 8500, '', 5, true, false, false, null),
   ('Red velvet', '', 8500, '', 6, true, false, false, null),
-  ('Ricota', '', 4500, '', 7, true, false, false, null)
+  ('Ricota', '', 5500, '', 7, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 13. Cookies
@@ -213,9 +218,6 @@ with c as (
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
   ('Brownie', '', 4500::numeric, '', 1, true, false, false, null::text),
-  ('Chispitas/Rockets', '', 4000, '', 2, true, false, false, null),
-  ('Limón', '', 4500, '', 3, true, false, false, null),
-  ('Marroc', '', 5000, '', 4, true, false, false, null),
   ('Nutella', '', 5000, '', 5, true, false, false, null),
   ('Pistachio', '', 5000, '', 6, true, false, false, null),
   ('Red Velvet', '', 5000, '', 7, true, false, false, null)
