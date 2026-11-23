@@ -1,7 +1,7 @@
 -- ============================================================
 --  COPIA DE SEGURIDAD DE LA CARTA — Dairus Rosario
---  Generada automáticamente el 22/11/2026, 01:58:55
---  30 secciones · 179 productos
+--  Generada automáticamente el 23/11/2026, 06:01:23
+--  30 secciones · 180 productos
 --
 --  PARA VOLVER ATRÁS:
 --  Supabase → SQL Editor → New query → pegar todo → Run.
@@ -45,7 +45,7 @@ with c as (
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
-  ('Americano', 'Doble shot de café, agua caliente', null::numeric, '', 1, true, false, false, null::text),
+  ('Americano', 'Doble shot de café, agua caliente', 3500::numeric, '', 1, true, false, false, null::text),
   ('Espresso', 'Shot de café', 2000, '', 2, true, false, false, null),
   ('Flat White/Cortado doble', 'Doble shot de café, leche texturizada', 3500, '', 3, true, false, false, null),
   ('Jarrita', 'Americano, cortado, lágrima', 2500, '', 4, true, false, false, null),
@@ -94,10 +94,10 @@ with c as (
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
-  ('Calentito', 'Pan de campo, manteca, jamón y queso', null::numeric, '', 1, true, false, false, null::text),
-  ('Carlito/Tostado', '', 9000, '', 2, true, false, false, null),
-  ('Carlito especial', '', 13000, '', 3, true, false, false, null),
-  ('Carlito pollo', '', 15000, '', 4, true, false, false, null),
+  ('Calentito', 'Pan de campo, manteca, jamón y queso', 6000::numeric, '', 1, true, false, false, null::text),
+  ('Carlito/Tostado', '', 10000, '', 2, true, false, false, null),
+  ('Carlito especial', '', 16000, '', 3, true, false, false, null),
+  ('Carlito pollo', '', 18000, '', 4, true, false, false, null),
   ('Dairus', 'Carne vacuna desmechada a las finas hierbas, con cebolla y queso gratinado, en pan de lomo con semillas', 18000, '', 5, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
@@ -109,7 +109,6 @@ with c as (
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
   ('Atún', '', 5000::numeric, '', 1, true, false, false, null::text),
-  ('Carne desmechada', 'Pan de lomo , carne desmechada', 15000, '', 2, true, false, false, null),
   ('Chipá de jamón y queso', 'Pan de chipa jamón y queso', 7500, '', 3, true, false, false, null),
   ('Pollo', '', 6500, '', 4, true, false, false, null),
   ('Primavera', 'Pan de cámpora con j y , lechuga y tomate', 5000, '', 5, true, false, false, null),
@@ -121,7 +120,7 @@ select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.f
 -- 7. Focaccias
 with c as (
   insert into public.categories (id, name, description, sort_order, visible, image_url)
-  values ('6328258a-f7dc-4635-9af2-fa4094de1137', 'Focaccias', '', 7, true, 'https://kkvtsodkmkxxmklsdlru.supabase.co/storage/v1/object/public/carta/seccion-1789097834482.jpg') returning id
+  values ('6328258a-f7dc-4635-9af2-fa4094de1137', 'Focaccias', 'acompañadas de papas', 7, true, 'https://kkvtsodkmkxxmklsdlru.supabase.co/storage/v1/object/public/carta/seccion-1789097834482.jpg') returning id
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
@@ -129,7 +128,8 @@ select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.f
   ('Campo', 'Salamín picado grueso y queso Pategras c/manteca', 15000, '', 2, true, false, false, null),
   ('Mediterránea', 'Jamón crudo, queso Patregras, rúcula, tomates cherrys, lluvia de Parmesano c/manteca y oliva', 15000, '', 3, true, false, false, null),
   ('Romántica', 'Escabeche de verduras, queso Tybo c/manteca', 13000, '', 4, true, false, false, null),
-  ('Hongos', 'Focaccia, aceite de oliva,queso y hongos pino,portobello y champignone', 15000, '', 5, true, false, false, null)
+  ('Hongos', 'Focaccia, aceite de oliva,queso y hongos pino,portobello y champignone', 15000, '', 5, true, false, false, null),
+  ('Mariscos', 'salteado de mariscos con salsa golf y queso gratinado', 20000, '', 6, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 8. Croissants
@@ -156,7 +156,7 @@ with c as (
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
-  ('Cheescake Rosario', 'Galletitas, vainillas, cheescake y frutos rojos', null::numeric, '', 1, true, false, false, null::text),
+  ('Cheescake Rosario', 'Galletitas, vainillas, cheescake y frutos rojos', 6000::numeric, '', 1, true, false, false, null::text),
   ('Chocotorta Rosario', 'Chocolinas y chocotorta', 6000, '', 2, true, false, false, null),
   ('Oreo Rosario', 'Galletitas oreo, dulce de leche y crema oreo', 6000, '', 3, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
@@ -230,7 +230,7 @@ with c as (
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
-  ('Clásicas', '', 3500::numeric, '', 1, true, false, false, null::text),
+  ('Clásicas', '', 3000::numeric, '', 1, true, false, false, null::text),
   ('Coron', 'Frutillas y chantilly', 6000, '', 2, true, false, false, null),
   ('Dairus', 'Rellena con Nutella, baño de chocolate con cubos de brownie y Ferrero en el centro', 9000, '', 3, true, false, false, null),
   ('Pista', 'Bañada con choco saborizado, rellena con crema de pistacho y lluvia de pistacho', 9000, '', 4, true, false, false, null),
@@ -322,7 +322,7 @@ insert into public.products (category_id, name, description, price, price_note, 
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
   ('Picada', 'Tortilla de papas, salamin, queso en cubos y olivas', 25000::numeric, 'Para 2 personas', 1, true, false, false, null::text),
   ('Picada fiambre', 'Tres tipos de queso, jamón cocido, jamón crudo, mortadela, salamín, olivas verdes y negras.', 50000, '', 2, true, false, false, null),
-  ('Tabla de mar', 'Rabas, cornalitos, 3 langostinos, dos brochet de camarones con panceta y papas fritas', 60000, 'Para 3 personas', 3, true, false, false, null),
+  ('Tabla de mar', 'Rabas, cornalitos, 3 langostinos, tres brochet de camarones con panceta y papas fritas', 60000, 'Para 3 personas', 3, true, false, false, null),
   ('Tabla de rebozados', 'Rabas, bastones de muzza, nuggets de pollo, milanesa, suprema, alitas de pollo, olivas y pickles. Todo sobre un colchón de papas fritas', 70000, 'Comen 4. Pican 5', 4, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
@@ -358,7 +358,8 @@ select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.f
   ('Muzzarella', '', 15000, 'Entera', 10, true, false, false, null),
   ('Muzzarella', '', 9000, '½ pizza', 11, true, false, false, null),
   ('Napolitana', '', 20000, 'Entera', 12, true, false, false, null),
-  ('Napolitana', '', 12000, '½ pizza', 13, true, false, false, null)
+  ('Napolitana', '', 12000, '½ pizza', 13, true, false, false, null),
+  ('La bomba del garden', 'muzzarella, colchón de rúcula, peras, acompan̈ado con trozos de roquefort y detalles de nueces mariposas', 15000, '1/2 pizza', 14, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 24. Bebidas sin alcohol
@@ -372,14 +373,15 @@ select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.f
   ('Exprimido', 'Natural de naranja', 5000, '', 2, true, false, false, null),
   ('Gaseosas', '', 4000, '', 3, true, false, false, null),
   ('Jarra Frutal', 'Hielo, seven up, frutillas, limón, naranja, arándanos y hoja de menta', 18000, '', 4, true, false, false, null),
-  ('Licuado con agua', 'Banana, frutilla, durazno', 4000, '', 5, true, false, false, null),
+  ('Licuado con agua', 'frutilla, durazno', 4000, '', 5, true, false, false, null),
   ('Licuado con leche', 'Banana, frutilla, durazno', 6500, '', 6, true, false, false, null),
   ('Limonada', 'Jugo de limón, almíbar simple, soda, menta y jengibre', 4000, '', 7, true, false, false, null),
-  ('Milkshake', '', 7000, '', 8, true, false, false, null),
+  ('Milkshake', 'helado ( americana chocolate )leche crema', 9000, '', 8, true, false, false, null),
   ('Limonada', 'Jugo de limón, almíbar simple, soda, jengibre y flores de jamaica', 12000, '1 Lt.', 9, true, false, false, null),
-  ('Pomelada', 'Jugo de pomelo, almíbar simple, soda, menta y albahaca', 4000, '', 10, true, false, false, null),
+  ('Pomelada', 'Jugo de pomelo, almíbar simple, soda, menta y albahaca', 6000, '', 10, true, false, false, null),
   ('Pomelada', 'Jugo de pomelo, almíbar simple, soda, menta y albahaca', 12000, '1 Lt.', 11, true, false, false, null),
-  ('Shootines', '', 6000, '', 12, true, false, false, null)
+  ('Shootines', '', 6000, '', 12, true, false, false, null),
+  ('Limonada Lavanda', 'jugo de limon exprimido syrus de lavanda agua de jamaica', 4500, '', 13, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 25. Cervezas
@@ -405,12 +407,11 @@ with c as (
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
-  ('Bournett IG Chardonnay', '', 10000::numeric, '', 1, true, false, false, null::text),
-  ('Bournett Malbec', '', 10000, '', 2, true, false, false, null),
-  ('Bournett Malbec Rose', '', 10000, '', 3, true, false, false, null),
-  ('Bournett RS', '', 22000, '', 4, true, false, false, null),
-  ('Prestige Pinot Noir', '', 16000, '', 5, true, false, false, null),
-  ('Santa Julia Chenin Blanco Dulce', '', 11000, '', 6, true, false, false, null)
+  ('Copa de vino', '', 7000::numeric, '', 1, true, false, false, null::text),
+  ('Bournett Malbec Rose', '', 10000, '', 2, true, false, false, null),
+  ('Partridge malbec', '', 10000, '', 3, true, false, false, null),
+  ('Trumpeter malbec', '', 16000, '', 4, true, false, false, null),
+  ('Santa Julia Chenin Blanco Dulce', '', 11000, '', 5, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 27. Jarras
@@ -420,8 +421,8 @@ with c as (
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
-  ('Lemon Champ', '', 25000::numeric, '', 1, true, false, false, null::text),
-  ('Sangría', 'Vino de la casa, Sprite, rodajas de naranja, exprimido y azúcar', 13000, '1 Lt. Para compartir', 2, true, false, false, null)
+  ('Lemon Champ', '', 28000::numeric, '', 1, true, false, false, null::text),
+  ('TINTO DE VERANO', 'Vino de la casa, Sprite, frutas, exprimido y azúcar', 22000, '1 Lt. Para compartir', 2, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- 28. Tragos
@@ -431,19 +432,19 @@ with c as (
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
-  ('Aperol Spritz', 'Aperol, champagne, soda y gajos de naranja', 7500::numeric, 'Vermut', 1, true, false, false, null::text),
-  ('Caramel Ice', 'Helado de americano, caramel y Nutella', 8000, '', 2, true, false, false, null),
-  ('Cynar Julep', 'Cynar, gaseosa pomelo, menta y azúcar', 7500, 'Vermut', 3, true, false, false, null),
-  ('Daiquiri', 'Ron, frutas naturales, limón y azúcar', 7500, '', 4, true, false, false, null),
-  ('Fernet Branca', 'Fernet Branca y Coca Cola', 7500, 'Vermut', 5, true, false, false, null),
-  ('Ferroviario', 'Fernet, soda, Carpano Rosso', 7500, 'Vermut', 6, true, false, false, null),
+  ('Aperol Spritz', 'Aperol, champagne, soda y gajos de naranja', 8500::numeric, 'Vermut', 1, true, false, false, null::text),
+  ('Caramel Ice', 'Helado de americano, caramel y Nutella', 8500, '', 2, true, false, false, null),
+  ('Cynar Julep', 'Cynar, gaseosa pomelo, menta y azúcar', 8000, 'Vermut', 3, true, false, false, null),
+  ('Daiquiri', 'Ron, frutas naturales, limón y azúcar', 8500, '', 4, true, false, false, null),
+  ('Fernet Branca', 'Fernet Branca y Coca Cola', 8000, 'Vermut', 5, true, false, false, null),
+  ('Ferroviario', 'Fernet, soda, Carpano Rosso', 8500, 'Vermut', 6, true, false, false, null),
   ('Gancia', 'Gancia y Sprite', 7500, 'Vermut', 7, true, false, false, null),
-  ('Garibaldi', 'Campari y exprimido de naranja', 7500, 'Vermut', 8, true, false, false, null),
-  ('Gin Citric', 'Gin, tónica y gajos de cítricos', 7500, '', 9, true, false, false, null),
-  ('Gin Frutos Rojos', 'Gin, tónica, frutos rojos y flor de Jamaica', 8000, '', 10, true, false, false, null),
-  ('Gin Tonic', 'Gin, tónica y gajos de limón', 7500, '', 11, true, false, false, null),
-  ('Lemon Champ', '', 7500, '', 12, true, false, false, null),
-  ('Negroni', 'Cinzano Rosso, gin y Campari', 7500, 'Vermut', 13, true, false, false, null),
+  ('Garibaldi', 'Campari y exprimido de naranja', 8000, 'Vermut', 8, true, false, false, null),
+  ('Gin Citric', 'Gin, tónica y gajos de cítricos', 8000, '', 9, true, false, false, null),
+  ('Gin Frutos Rojos', 'Gin, tónica, frutos rojos y flor de Jamaica', 8500, '', 10, true, false, false, null),
+  ('Gin Tonic', 'Gin, tónica y gajos de limón', 8000, '', 11, true, false, false, null),
+  ('Lemon Champ', '', 8500, '', 12, true, false, false, null),
+  ('Negroni', 'Cinzano Rosso, gin y Campari', 8500, 'Vermut', 13, true, false, false, null),
   ('Rosarino', 'Amargo Obrero y gaseosa pomelo', 7500, 'Vermut', 14, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
@@ -465,8 +466,8 @@ with c as (
 )
 insert into public.products (category_id, name, description, price, price_note, sort_order, visible, sold_out, featured, image_url)
 select c.id, v.name, v.descr, v.price, v.nota, v.ord, v.vis, v.agot, v.dest, v.foto from c, (values
-  ('Jameson', '', 7500::numeric, '', 2, true, false, false, null::text),
-  ('Johnnie Walker Red Label', '', 7000, '', 3, true, false, false, null)
+  ('Jameson', '', 8500::numeric, '', 2, true, false, false, null::text),
+  ('Johnnie Walker Red Label', '', 8000, '', 3, true, false, false, null)
 ) as v(name, descr, price, nota, ord, vis, agot, dest, foto);
 
 -- nombre, colores, logo, fondo, horarios y contactos
